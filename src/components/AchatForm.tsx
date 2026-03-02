@@ -1,6 +1,8 @@
 import { useState, FormEvent } from 'react';
+import DatePicker from 'react-datepicker';
+import { fr } from 'date-fns/locale';
+import 'react-datepicker/dist/react-datepicker.css';
 import { useApp } from '../context/AppContext';
-import { toFrenchDate, fromFrenchDate } from '../lib/dateUtils';
 import './Modal.css';
 
 interface AchatFormProps {
@@ -10,18 +12,27 @@ interface AchatFormProps {
 export default function AchatForm({ onClose }: AchatFormProps) {
   const { addAchat } = useApp();
   const todayIso = new Date().toISOString().slice(0, 10);
-  const [dateDisplay, setDateDisplay] = useState(() => toFrenchDate(todayIso));
+  const [dateIso, setDateIso] = useState(todayIso);
   const [montantAr, setMontantAr] = useState('');
   const [creditKwh, setCreditKwh] = useState('');
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const dateIso = fromFrenchDate(dateDisplay) || todayIso;
     const montant = parseFloat(montantAr.replace(/\s/g, '').replace(',', '.'));
     const kwh = parseFloat(creditKwh.replace(',', '.'));
     if (Number.isFinite(montant) && montant >= 0 && Number.isFinite(kwh) && kwh > 0) {
       addAchat(dateIso, montant, kwh);
       onClose();
+    }
+  };
+
+  const selectedDate = dateIso ? new Date(dateIso + 'T12:00:00') : null;
+
+  const handleDateChange = (d: Date | null) => {
+    if (d) {
+      setDateIso(d.toISOString().slice(0, 10));
+      setTimeout(() => setCalendarOpen(false), 0);
     }
   };
 
@@ -37,11 +48,16 @@ export default function AchatForm({ onClose }: AchatFormProps) {
         <form onSubmit={handleSubmit} className="modal-form">
           <label>
             Date de l'achat
-            <input
-              type="text"
-              value={dateDisplay}
-              onChange={(e) => setDateDisplay(e.target.value)}
-              placeholder="jj/mm/aaaa"
+            <DatePicker
+              selected={selectedDate}
+              open={calendarOpen}
+              onInputClick={() => setCalendarOpen(true)}
+              onChange={handleDateChange}
+              onCalendarClose={() => setCalendarOpen(false)}
+              locale={fr}
+              dateFormat="dd/MM/yyyy"
+              placeholderText="jj/mm/aaaa"
+              className="input-datepicker"
               required
             />
           </label>

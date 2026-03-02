@@ -1,15 +1,20 @@
 .dashboard-cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
+  gap: 1.25rem;
   margin-bottom: 1.5rem;
 }
 
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem 1.25rem;
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  transition: box-shadow var(--transition), border-color var(--transition), transform var(--transition);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .card h3 {
@@ -24,12 +29,14 @@
   margin: 0;
   font-size: 1.5rem;
   font-weight: 700;
+  font-family: 'Jura', 'Space Grotesk', sans-serif;
 }
 
 .card-detail {
   margin: 0.5rem 0 0;
   font-size: 0.8rem;
   color: var(--text-secondary);
+  font-family: 'Jura', 'Space Grotesk', sans-serif;
 }
 
 .card-detail-warning {
@@ -49,4 +56,29 @@
 .card-prochain.card-highlight {
   background: rgba(63, 185, 80, 0.12);
   border-color: var(--accent-green);
+}
+
+@media (max-width: 640px) {
+  .dashboard-cards {
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+  }
+
+  .card {
+    padding: 0.75rem 1rem;
+  }
+
+  .card h3 {
+    margin: 0 0 0.35rem;
+    font-size: 0.7rem;
+  }
+
+  .card-value {
+    font-size: 1.3rem;
+  }
+
+  .card-detail {
+    margin: 0.35rem 0 0;
+    font-size: 0.75rem;
+  }
 }

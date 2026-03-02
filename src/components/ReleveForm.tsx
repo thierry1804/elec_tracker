@@ -1,6 +1,8 @@
 import { useState, FormEvent } from 'react';
+import DatePicker from 'react-datepicker';
+import { fr } from 'date-fns/locale';
+import 'react-datepicker/dist/react-datepicker.css';
 import { useApp } from '../context/AppContext';
-import { toFrenchDate, fromFrenchDate } from '../lib/dateUtils';
 import './Modal.css';
 
 interface ReleveFormProps {
@@ -10,16 +12,26 @@ interface ReleveFormProps {
 export default function ReleveForm({ onClose }: ReleveFormProps) {
   const { addReleve } = useApp();
   const todayIso = new Date().toISOString().slice(0, 10);
-  const [dateDisplay, setDateDisplay] = useState(() => toFrenchDate(todayIso));
+  const [dateIso, setDateIso] = useState(todayIso);
   const [creditRestantKwh, setCreditRestantKwh] = useState('');
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const dateIso = fromFrenchDate(dateDisplay) || todayIso;
     const kwh = parseFloat(creditRestantKwh.replace(',', '.'));
     if (Number.isFinite(kwh) && kwh >= 0) {
       addReleve(dateIso, kwh);
       onClose();
+    }
+  };
+
+  const selectedDate = dateIso ? new Date(dateIso + 'T12:00:00') : null;
+
+  const handleDateChange = (d: Date | null) => {
+    if (d) {
+      setDateIso(d.toISOString().slice(0, 10));
+      // Fermer le calendrier au prochain tick pour éviter tout conflit avec le state du DatePicker
+      setTimeout(() => setCalendarOpen(false), 0);
     }
   };
 
@@ -35,11 +47,16 @@ export default function ReleveForm({ onClose }: ReleveFormProps) {
         <form onSubmit={handleSubmit} className="modal-form">
           <label>
             Date du relevé
-            <input
-              type="text"
-              value={dateDisplay}
-              onChange={(e) => setDateDisplay(e.target.value)}
-              placeholder="jj/mm/aaaa"
+            <DatePicker
+              selected={selectedDate}
+              open={calendarOpen}
+              onInputClick={() => setCalendarOpen(true)}
+              onChange={handleDateChange}
+              onCalendarClose={() => setCalendarOpen(false)}
+              locale={fr}
+              dateFormat="dd/MM/yyyy"
+              placeholderText="jj/mm/aaaa"
+              className="input-datepicker"
               required
             />
           </label>

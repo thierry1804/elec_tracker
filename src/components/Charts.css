@@ -1,9 +1,15 @@
 .chart-container {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem 1.25rem;
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
   margin-bottom: 1.5rem;
+  font-family: 'Jura', 'Space Grotesk', sans-serif;
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-container text {
+  font-family: 'Jura', 'Space Grotesk', sans-serif;
 }
 
 .chart-container h3 {
@@ -26,4 +32,20 @@
   margin: 0;
   color: var(--text-secondary);
   font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+  .chart-container {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .chart-container h3 {
+    margin: 0 0 0.65rem;
+    font-size: 0.8rem;
+  }
+
+  .chart-empty {
+    min-height: 90px;
+  }
 }

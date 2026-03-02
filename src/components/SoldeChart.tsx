@@ -79,7 +79,7 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
           <YAxis stroke="var(--text-secondary)" fontSize={12} />
           <Tooltip
             contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-            labelFormatter={(v) => new Date(v).toLocaleDateString('fr-FR')}
+            labelFormatter={(v) => new Date(v).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
             formatter={(value: number, name: string) => {
               if (name === 'solde') return [`${value} kWh`, 'Solde'];
               if (name === 'prevision') return [`${value} kWh`, 'Prévision'];

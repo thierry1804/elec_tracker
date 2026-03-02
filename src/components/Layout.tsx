@@ -14,36 +14,40 @@ export default function Layout() {
 
   return (
     <div className="layout">
-      <header className="header">
-        <div className="header-left">
-          <h1 className="logo">
-            ElecTracker <span className="badge">PRÉPAYÉ</span>
-          </h1>
-          <time className="date" dateTime={new Date().toISOString()}>
-            {today}
-          </time>
-        </div>
-        <div className="header-actions">
-          <button type="button" className="btn btn-releve" onClick={() => setShowReleve(true)}>
-            + Relevé
-          </button>
-          <button type="button" className="btn btn-achat" onClick={() => setShowAchat(true)}>
-            + Achat
-          </button>
-        </div>
-      </header>
+      <div className="layout-sticky">
+        <header className="header">
+          <div className="header-left">
+            <h1 className="logo">
+              ElecTracker <span className="badge">PRÉPAYÉ</span>
+            </h1>
+            <time className="date" dateTime={new Date().toISOString()}>
+              {today}
+            </time>
+          </div>
+          <div className="header-actions">
+            <button type="button" className="btn btn-releve" onClick={() => setShowReleve(true)}>
+              + Relevé
+            </button>
+            <button type="button" className="btn btn-achat" onClick={() => setShowAchat(true)}>
+              + Achat
+            </button>
+          </div>
+        </header>
 
-      <nav className="nav">
-        <NavLink to="/" end className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-          Dashboard
-        </NavLink>
-        <NavLink to="/historique" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-          Historique
-        </NavLink>
-        <NavLink to="/achats" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-          Achats
-        </NavLink>
-      </nav>
+        <nav className="nav">
+          <NavLink to="/" end className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+            Dashboard
+          </NavLink>
+          <NavLink to="/historique" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+            Historique
+          </NavLink>
+          <NavLink to="/achats" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+            Achats
+          </NavLink>
+        </nav>
+      </div>
+
+      <div className="layout-spacer" aria-hidden="true" />
 
       <main className="main">
         <Outlet />
