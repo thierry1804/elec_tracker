@@ -1,0 +1,47 @@
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+}
+
+.card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.card-value {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.card-detail {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.value-green { color: var(--accent-green); }
+.value-blue { color: var(--accent-blue); }
+.value-orange { color: var(--accent-orange); }
+
+.card-alert {
+  border-color: var(--accent-orange);
+  background: rgba(210, 153, 34, 0.08);
+}
+
+.card-prochain.card-highlight {
+  background: rgba(63, 185, 80, 0.12);
+  border-color: var(--accent-green);
+}

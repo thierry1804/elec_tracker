@@ -1,0 +1,106 @@
+.layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.logo {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--accent-blue);
+  color: #fff;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
+.date {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.btn-releve {
+  background: var(--accent-blue);
+  color: #fff;
+}
+
+.btn-releve:hover {
+  filter: brightness(1.1);
+}
+
+.btn-achat {
+  background: var(--accent-orange);
+  color: #0f1419;
+}
+
+.btn-achat:hover {
+  filter: brightness(1.1);
+}
+
+.nav {
+  display: flex;
+  gap: 0;
+  padding: 0 1.5rem;
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-link {
+  padding: 0.75rem 1.25rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.nav-link:hover {
+  color: var(--text-primary);
+}
+
+.nav-link.active {
+  color: var(--accent-blue);
+  border-bottom-color: var(--accent-blue);
+}
+
+.main {
+  flex: 1;
+  padding: 1.5rem;
+}
