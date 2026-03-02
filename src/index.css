@@ -58,6 +58,12 @@ input, select {
   color: var(--accent-blue);
 }
 
+.alert-banner.alert-warning {
+  background: rgba(234, 179, 8, 0.15);
+  border-color: #ca8a04;
+  color: #a16207;
+}
+
 .page-empty {
   padding: 2rem;
   text-align: center;

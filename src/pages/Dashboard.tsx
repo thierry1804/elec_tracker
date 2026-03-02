@@ -8,6 +8,7 @@ import {
   getDateEpuisementEstimee,
   getJoursRestants,
   isAlerteCreditFaible,
+  getMessageAvertissementPrevision,
 } from '../lib/calculs';
 
 export default function Dashboard() {
@@ -29,12 +30,18 @@ export default function Dashboard() {
   const hasReleves = releves.length > 0;
   const predictionDisponible = joursRestants !== null;
   const showAlert = hasReleves && alerte && predictionDisponible;
+  const messagePrevision = getMessageAvertissementPrevision(releves);
 
   return (
     <div className="dashboard">
       {!hasReleves && (
         <div className="alert-banner alert-info" role="status">
           Ajoutez un relevé (bouton « + Relevé ») pour afficher le solde et les prévisions.
+        </div>
+      )}
+      {messagePrevision && (
+        <div className="alert-banner alert-warning" role="status">
+          {messagePrevision}
         </div>
       )}
       {showAlert && (

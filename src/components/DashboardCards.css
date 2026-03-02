@@ -32,6 +32,11 @@
   color: var(--text-secondary);
 }
 
+.card-detail-warning {
+  color: #a16207;
+  font-style: italic;
+}
+
 .value-green { color: var(--accent-green); }
 .value-blue { color: var(--accent-blue); }
 .value-orange { color: var(--accent-orange); }

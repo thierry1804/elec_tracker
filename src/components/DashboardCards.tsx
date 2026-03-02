@@ -7,6 +7,7 @@ import {
   getProchainAchatSuggere,
   getCoutMensuelEstime,
   isAlerteCreditFaible,
+  isPrevisionPeuFiable,
 } from '../lib/calculs';
 import type { AppData } from '../types';
 import './DashboardCards.css';
@@ -35,6 +36,7 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
     : null;
   const kwhMoisEstime = tauxJournalier != null ? Math.round(tauxJournalier * 30 * 10) / 10 : null;
   const alerte = isAlerteCreditFaible(creditRestant, joursRestants ?? 0);
+  const previsionPeuFiable = isPrevisionPeuFiable(releves);
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -64,7 +66,12 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
         <p className="card-value value-blue">
           {tauxJournalier != null ? `${tauxJournalier.toFixed(2)} kWh/j` : '—'}
         </p>
-        <p className="card-detail">Moyenne pondérée (7j / 30j / global)</p>
+        <p className="card-detail">
+          Moyenne pondérée (7j / 30j / global)
+          {previsionPeuFiable && tauxJournalier != null && (
+            <span className="card-detail-warning"> — peu fiable (moins de 3 j d’historique)</span>
+          )}
+        </p>
       </div>
 
       <div className="card">

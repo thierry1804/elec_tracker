@@ -23,6 +23,16 @@ export function getRelevesTries(releves: Releve[]): Releve[] {
   });
 }
 
+const MS_PAR_JOUR = 24 * 60 * 60 * 1000;
+/** Durée minimale entre deux relevés pour éviter des taux aberrants (1 h). */
+const NB_JOURS_MIN = 1 / 24;
+/** Intervalles < 6h sont exclus du calcul de prévision (extrapolation horaire non fiable). */
+const MIN_INTERVAL_JOURS_PREVISION = 6 / 24;
+/** Historique minimum (en jours réels) pour afficher une prévision. */
+const JOURS_MIN_HISTORIQUE_PREVISION = 2;
+/** En dessous de ce nombre de jours d'historique, la prévision est considérée comme peu fiable. */
+const JOURS_SEUIL_FIABILITE_PREVISION = 3;
+
 export function getConsommationsEntreReleves(releves: Releve[]): ConsoEntreReleves[] {
   const tries = getRelevesTries(releves);
   const result: ConsoEntreReleves[] = [];
@@ -32,7 +42,8 @@ export function getConsommationsEntreReleves(releves: Releve[]): ConsoEntreRelev
     const kwhConsommes = prev.creditRestantKwh - curr.creditRestantKwh;
     const dateDebut = new Date(prev.date);
     const dateFin = new Date(curr.date);
-    const nbJours = Math.max(1, Math.round((dateFin.getTime() - dateDebut.getTime()) / (24 * 60 * 60 * 1000)));
+    const deltaMs = dateFin.getTime() - dateDebut.getTime();
+    const nbJours = Math.max(NB_JOURS_MIN, deltaMs / MS_PAR_JOUR);
     const tauxJournalier = kwhConsommes / nbJours;
     result.push({
       dateDebut: prev.date,
@@ -45,6 +56,27 @@ export function getConsommationsEntreReleves(releves: Releve[]): ConsoEntreRelev
     });
   }
   return result;
+}
+
+/**
+ * Étendue de l'historique en jours (du premier au dernier relevé).
+ */
+export function getSpanHistoriqueJours(releves: Releve[]): number {
+  const tries = getRelevesTries(releves);
+  if (tries.length < 2) return 0;
+  const first = new Date(tries[0].date).getTime();
+  const last = new Date(tries[tries.length - 1].date).getTime();
+  return (last - first) / MS_PAR_JOUR;
+}
+
+/**
+ * Consommations entre relevés dont l'intervalle est >= 6h.
+ * Utilisé pour la prévision pour éviter d'extrapoler à partir de snapshots horaires.
+ */
+function getConsommationsFiablesPourPrevision(releves: Releve[]): ConsoEntreReleves[] {
+  return getConsommationsEntreReleves(releves).filter(
+    (c) => c.nbJours >= MIN_INTERVAL_JOURS_PREVISION
+  );
 }
 
 export function getPrixMoyenArPerKwh(achats: Achat[]): number | null {
@@ -72,7 +104,7 @@ const POIDS_GLOBAL = 0.1;
 function getTauxSurPeriode(consos: ConsoEntreReleves[], nbJours: number): number | null {
   if (consos.length === 0) return null;
   const now = Date.now();
-  const limit = now - nbJours * 24 * 60 * 60 * 1000;
+  const limit = now - nbJours * MS_PAR_JOUR;
   const period = consos.filter((c) => new Date(c.dateFin).getTime() >= limit);
   if (period.length === 0) return null;
   const totalKwh = period.reduce((s, c) => s + c.kwhConsommes, 0);
@@ -80,19 +112,13 @@ function getTauxSurPeriode(consos: ConsoEntreReleves[], nbJours: number): number
   return totalJours > 0 ? totalKwh / totalJours : null;
 }
 
-/**
- * Taux journalier moyen pondéré : 7 derniers jours (0.6) + 30 derniers jours (0.3) + global (0.1).
- * Repli sur les périodes disponibles si pas assez de données.
- */
-export function getTauxJournalierPondere(releves: Releve[]): number | null {
-  const consos = getConsommationsEntreReleves(releves);
+function getTauxJournalierPondereFromConsos(consos: ConsoEntreReleves[]): number | null {
   if (consos.length === 0) return null;
   const taux7 = getTauxSurPeriode(consos, 7);
   const taux30 = getTauxSurPeriode(consos, 30);
   const totalKwh = consos.reduce((s, c) => s + c.kwhConsommes, 0);
   const totalJours = consos.reduce((s, c) => s + c.nbJours, 0);
   const tauxGlobal = totalJours > 0 ? totalKwh / totalJours : null;
-
   const parts: { poids: number; taux: number }[] = [];
   if (taux7 != null) parts.push({ poids: POIDS_SEMAINE, taux: taux7 });
   if (taux30 != null) parts.push({ poids: POIDS_MOIS, taux: taux30 });
@@ -103,21 +129,27 @@ export function getTauxJournalierPondere(releves: Releve[]): number | null {
 }
 
 /**
- * Régression linéaire : taux_journalier en fonction du temps (jours depuis premier relevé).
- * Retourne la pente (kWh/j par jour) ou 0 si pas assez de points.
+ * Taux journalier moyen pondéré : 7 derniers jours (0.6) + 30 derniers jours (0.3) + global (0.1).
+ * Repli sur les périodes disponibles si pas assez de données.
  */
-export function getTendanceConso(releves: Releve[]): number {
+export function getTauxJournalierPondere(releves: Releve[]): number | null {
   const consos = getConsommationsEntreReleves(releves);
+  return getTauxJournalierPondereFromConsos(consos);
+}
+
+function getTendanceConsoFromConsos(
+  consos: ConsoEntreReleves[],
+  firstDateReleves: string
+): number {
   if (consos.length < 2) return 0;
-  const tries = getRelevesTries(releves);
-  const firstTime = new Date(tries[0].date).getTime();
+  const firstTime = new Date(firstDateReleves).getTime();
   let sumX = 0;
   let sumY = 0;
   let sumXY = 0;
   let sumX2 = 0;
   const n = consos.length;
   for (let i = 0; i < n; i++) {
-    const x = (new Date(consos[i].dateFin).getTime() - firstTime) / (24 * 60 * 60 * 1000);
+    const x = (new Date(consos[i].dateFin).getTime() - firstTime) / MS_PAR_JOUR;
     const y = consos[i].tauxJournalier;
     sumX += x;
     sumY += y;
@@ -130,23 +162,69 @@ export function getTendanceConso(releves: Releve[]): number {
 }
 
 /**
+ * Régression linéaire : taux_journalier en fonction du temps (jours depuis premier relevé).
+ * Retourne la pente (kWh/j par jour) ou 0 si pas assez de points.
+ */
+export function getTendanceConso(releves: Releve[]): number {
+  const consos = getConsommationsEntreReleves(releves);
+  const tries = getRelevesTries(releves);
+  return getTendanceConsoFromConsos(consos, tries[0]?.date ?? '');
+}
+
+/**
+ * Indique si la prévision est basée sur peu de données (moins de 3 jours d'historique).
+ */
+export function isPrevisionPeuFiable(releves: Releve[]): boolean {
+  return getSpanHistoriqueJours(releves) < JOURS_SEUIL_FIABILITE_PREVISION;
+}
+
+/**
+ * Message d'avertissement quand la prévision est affichée mais peu fiable, ou quand elle est indisponible.
+ */
+export function getMessageAvertissementPrevision(releves: Releve[]): string | null {
+  const spanJours = getSpanHistoriqueJours(releves);
+  const consosFiables = getConsommationsFiablesPourPrevision(releves);
+
+  if (releves.length < 2) return null;
+  if (spanJours < JOURS_MIN_HISTORIQUE_PREVISION) {
+    return 'Ajoutez des relevés sur au moins 2 jours pour afficher la prévision.';
+  }
+  if (consosFiables.length === 0) {
+    return 'Prévision indisponible : aucun intervalle ≥ 6h entre relevés. Saisir des relevés à heures régulières (matin + soir) sur plusieurs jours.';
+  }
+  if (spanJours < JOURS_SEUIL_FIABILITE_PREVISION) {
+    return 'Prévision basée sur moins de 3 jours de données — peu fiable. Saisir des relevés à heures régulières (matin + soir) pendant 7 jours pour améliorer.';
+  }
+  return null;
+}
+
+/**
  * Taux de prédiction = moyenne pondérée × coefficient tendance.
- * Coefficient tendance = 1 + (pente × 7 jours / taux_moyen) pour une évolution par semaine, plafonné à [0.85, 1.15].
+ * N'utilise que les intervalles >= 6h pour éviter l'extrapolation à partir de snapshots horaires.
+ * Retourne null si l'historique couvre moins de 2 jours ou s'il n'y a aucun intervalle fiable.
  */
 export function getTauxJournalierPrediction(releves: Releve[]): number | null {
-  const tauxPondere = getTauxJournalierPondere(releves);
+  const spanJours = getSpanHistoriqueJours(releves);
+  if (spanJours < JOURS_MIN_HISTORIQUE_PREVISION) return null;
+
+  const consosFiables = getConsommationsFiablesPourPrevision(releves);
+  if (consosFiables.length === 0) return null;
+
+  const tauxPondere = getTauxJournalierPondereFromConsos(consosFiables);
   if (tauxPondere == null || tauxPondere <= 0) return null;
-  const pente = getTendanceConso(releves);
+
+  const tries = getRelevesTries(releves);
+  const pente = getTendanceConsoFromConsos(consosFiables, tries[0]?.date ?? '');
   const variationParSemaine = (pente * 7) / tauxPondere;
   const coefficientTendance = Math.max(0.85, Math.min(1.15, 1 + variationParSemaine));
   return tauxPondere * coefficientTendance;
 }
 
-/** Marge relative pour l'intervalle de confiance (écart-type des taux ou 15 % par défaut). */
+/** Marge relative pour l'intervalle de confiance (écart-type des taux ou 15 % par défaut). Utilise les intervalles >= 6h pour éviter une bande trop large. */
 export function getMargeIntervalleConfiance(releves: Releve[]): number {
-  const consos = getConsommationsEntreReleves(releves);
+  const consos = getConsommationsFiablesPourPrevision(releves);
   if (consos.length < 2) return 0.15;
-  const tauxPondere = getTauxJournalierPondere(releves) ?? 0;
+  const tauxPondere = getTauxJournalierPondereFromConsos(consos) ?? 0;
   if (tauxPondere <= 0) return 0.15;
   const mean = consos.reduce((s, c) => s + c.tauxJournalier, 0) / consos.length;
   const variance =
