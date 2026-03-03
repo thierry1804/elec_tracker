@@ -13,6 +13,11 @@ export default function Historique() {
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
+  const formatDuree = (nbJours: number) =>
+    nbJours < 1
+      ? `${(nbJours * 24).toFixed(1).replace('.', ',')} h`
+      : `${Number.isInteger(nbJours) ? nbJours : nbJours.toFixed(1).replace('.', ',')} j`;
+
   if (tries.length === 0) {
     return (
       <div className="page-empty">
@@ -44,7 +49,7 @@ export default function Historique() {
                   <td>{releve.creditRestantKwh}</td>
                   <td>
                     {conso != null
-                      ? `${conso.kwhConsommes.toFixed(2)} (sur ${conso.nbJours} j)`
+                      ? `${conso.kwhConsommes.toFixed(2)} (sur ${formatDuree(conso.nbJours)})`
                       : '—'}
                   </td>
                   <td>

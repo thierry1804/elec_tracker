@@ -268,6 +268,12 @@ export function getProchainAchatSuggere(dateEpuisement: Date | null): Date | nul
   return d;
 }
 
+/** Suggestion de kWh à acheter pour ~7 jours d'autonomie (pour affichage CTA). */
+export function getKwhAchatSuggere(tauxJournalier: number | null): number | null {
+  if (tauxJournalier == null || tauxJournalier <= 0) return null;
+  return Math.max(10, Math.round(tauxJournalier * 7));
+}
+
 export function getCoutMensuelEstime(tauxJournalier: number, prixMoyenArPerKwh: number): number {
   const kwhMois = tauxJournalier * 30;
   return Math.round(kwhMois * prixMoyenArPerKwh);
@@ -317,19 +323,29 @@ export function getDonneesPrevisionSolde(
 export function getDonneesPrevisionAvecIntervalle(
   releves: Releve[]
 ): { date: string; solde: number; soldeMin: number; soldeMax: number }[] {
-  const tries = getRelevesTries(releves);
-  if (tries.length === 0) return [];
   const taux = getTauxJournalierPrediction(releves);
   if (taux == null || taux <= 0) return [];
+  return getDonneesPrevisionAvecIntervalleFromTaux(releves, taux);
+}
+
+/**
+ * Même courbe de prévision à partir d’un taux journalier donné (ex. fourni par l’IA).
+ */
+export function getDonneesPrevisionAvecIntervalleFromTaux(
+  releves: Releve[],
+  tauxJournalier: number
+): { date: string; solde: number; soldeMin: number; soldeMax: number }[] {
+  const tries = getRelevesTries(releves);
+  if (tries.length === 0 || tauxJournalier <= 0) return [];
   const marge = getMargeIntervalleConfiance(releves);
-  const tauxMin = taux * (1 - marge);
-  const tauxMax = taux * (1 + marge);
+  const tauxMin = tauxJournalier * (1 - marge);
+  const tauxMax = tauxJournalier * (1 + marge);
   const dernier = tries[tries.length - 1];
   const toIso = (d: Date) => d.toISOString().slice(0, 10);
   const result: { date: string; solde: number; soldeMin: number; soldeMax: number }[] = [];
   let date = new Date(dernier.date);
   date.setDate(date.getDate() + 1);
-  let solde = Math.max(0, dernier.creditRestantKwh - taux);
+  let solde = Math.max(0, dernier.creditRestantKwh - tauxJournalier);
   let soldeMin = Math.max(0, dernier.creditRestantKwh - tauxMax);
   let soldeMax = Math.max(0, dernier.creditRestantKwh - tauxMin);
   while (solde > 0.01 || soldeMax > 0.01) {
@@ -340,7 +356,7 @@ export function getDonneesPrevisionAvecIntervalle(
       soldeMax: Math.max(0, soldeMax),
     });
     date.setDate(date.getDate() + 1);
-    solde -= taux;
+    solde -= tauxJournalier;
     soldeMin -= tauxMax;
     soldeMax -= tauxMin;
   }

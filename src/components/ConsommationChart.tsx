@@ -20,16 +20,23 @@ export default function ConsommationChart({ releves }: ConsommationChartProps) {
 
   if (data.length === 0) {
     return (
-      <div className="chart-container chart-empty">
-        <h3>CONSOMMATION ENTRE RELEVÉS (kWh)</h3>
-        <p>Ajoutez au moins deux relevés pour afficher la consommation.</p>
+      <div className="chart-container">
+        <div className="chart-header">
+          <span className="chart-title">Consommation entre relevés</span>
+        </div>
+        <div className="chart-empty">
+          <div className="chart-empty-icon">🔋</div>
+          <div className="chart-empty-text">Ajoutez au moins 2 relevés</div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="chart-container">
-      <h3>CONSOMMATION ENTRE RELEVÉS (kWh)</h3>
+      <div className="chart-header">
+        <span className="chart-title">Consommation entre relevés</span>
+      </div>
       <ResponsiveContainer width="100%" height={260}>
         <BarChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -41,7 +48,7 @@ export default function ConsommationChart({ releves }: ConsommationChartProps) {
           <YAxis stroke="var(--text-secondary)" fontSize={12} />
           <Tooltip
             contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-            formatter={(value: number) => [`${value} kWh`, 'Consommation']}
+            formatter={(value: number) => [`${Number(value).toFixed(2)} kWh`, 'Consommation']}
           />
           <Bar dataKey="conso" fill="var(--accent-orange)" radius={[4, 4, 0, 0]} />
         </BarChart>

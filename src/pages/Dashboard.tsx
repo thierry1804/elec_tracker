@@ -1,30 +1,22 @@
 import { useApp } from '../context/AppContext';
-import DashboardCards from '../components/DashboardCards';
+import { useLayoutActions } from '../context/LayoutContext';
+import { usePrevision } from '../context/PrevisionContext';
+import DashboardCards, { ProchainAchatCTA } from '../components/DashboardCards';
 import SoldeChart from '../components/SoldeChart';
 import ConsommationChart from '../components/ConsommationChart';
-import {
-  getRelevesTries,
-  getTauxJournalierPrediction,
-  getDateEpuisementEstimee,
-  getJoursRestants,
-  isAlerteCreditFaible,
-  getMessageAvertissementPrevision,
-} from '../lib/calculs';
+import { isAlerteCreditFaible, getMessageAvertissementPrevision } from '../lib/calculs';
 
 export default function Dashboard() {
   const { data } = useApp();
+  const layoutActions = useLayoutActions();
+  const prevision = usePrevision();
   const { releves } = data;
-  const tries = getRelevesTries(releves);
+  const tries = [...releves].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
   const dernierReleve = tries[tries.length - 1];
   const creditRestant = dernierReleve?.creditRestantKwh ?? 0;
-  const tauxJournalier = getTauxJournalierPrediction(releves);
-  const dateEpuisement =
-    tauxJournalier != null &&
-    tauxJournalier > 0 &&
-    dernierReleve?.date
-      ? getDateEpuisementEstimee(creditRestant, tauxJournalier, dernierReleve.date)
-      : null;
-  const joursRestants = getJoursRestants(dateEpuisement);
+  const { joursRestants } = prevision;
   const alerte = isAlerteCreditFaible(creditRestant, joursRestants ?? 0);
 
   const hasReleves = releves.length > 0;
@@ -35,11 +27,20 @@ export default function Dashboard() {
   return (
     <div className="dashboard">
       {!hasReleves && (
-        <div className="alert-banner alert-info" role="status">
-          Ajoutez un relevé (bouton « + Relevé ») pour afficher le solde et les prévisions.
+        <div className="cta-banner" role="status">
+          <div className="cta-text">
+            <strong>Commencez ici —</strong> ajoutez votre premier relevé de compteur pour activer le tableau de bord.
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => layoutActions?.openReleve()}
+          >
+            + Relevé
+          </button>
         </div>
       )}
-      {messagePrevision && (
+      {hasReleves && messagePrevision && (
         <div className="alert-banner alert-warning" role="status">
           {messagePrevision}
         </div>
@@ -51,8 +52,11 @@ export default function Dashboard() {
         </div>
       )}
       <DashboardCards data={data} />
-      <SoldeChart releves={releves} />
-      <ConsommationChart releves={releves} />
+      <div className="grid-2">
+        <SoldeChart releves={releves} />
+        <ConsommationChart releves={releves} />
+      </div>
+      <ProchainAchatCTA data={data} />
     </div>
   );
 }

@@ -1,84 +1,280 @@
-.dashboard-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 1.5rem;
+/* ── Hero card ── */
+.hero-card {
+  background: transparent;
+  border: none;
+  border-radius: 20px;
+  padding: 28px 28px 24px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
 }
 
-.card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 1.25rem 1.5rem;
-  transition: box-shadow var(--transition), border-color var(--transition), transform var(--transition);
+.hero-card::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(56, 189, 248, 0.1) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
 }
 
-.card:hover {
-  box-shadow: var(--shadow-md);
+.hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
 }
 
-.card h3 {
-  margin: 0 0 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  color: var(--text-secondary);
-}
-
-.card-value {
-  margin: 0;
-  font-size: 1.5rem;
+.hero-label {
+  font-size: 11px;
   font-weight: 700;
-  font-family: 'Jura', 'Space Grotesk', sans-serif;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
 }
 
-.card-detail {
-  margin: 0.5rem 0 0;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  font-family: 'Jura', 'Space Grotesk', sans-serif;
+.hero-value {
+  font-size: 52px;
+  font-weight: 700;
+  letter-spacing: -2px;
+  line-height: 1;
+  font-family: 'Space Mono', monospace;
 }
 
-.card-detail-warning {
-  color: #a16207;
+.hero-value.healthy {
+  color: var(--green);
+}
+
+.hero-value.warning {
+  color: var(--amber);
+}
+
+.hero-value.critical {
+  color: var(--red);
+}
+
+.hero-value.empty {
+  color: rgba(255, 255, 255, 0.15);
+}
+
+.hero-unit {
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+.hero-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.hero-sub span {
+  color: var(--text);
+}
+
+.gauge-wrap {
+  position: relative;
+  width: 100px;
+  flex-shrink: 0;
+}
+
+.gauge-label {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--muted);
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+/* Progress bar under hero */
+.progress-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-fill.healthy {
+  background: linear-gradient(90deg, #059669, var(--green));
+}
+
+.progress-fill.warning {
+  background: linear-gradient(90deg, #d97706, var(--amber));
+}
+
+.progress-fill.critical {
+  background: linear-gradient(90deg, #dc2626, var(--red));
+}
+
+.progress-fill.empty {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Stats grid ── */
+.dashboard-cards .grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+  cursor: default;
+}
+
+.stat-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.stat-card.accent-blue {
+  border-color: rgba(56, 189, 248, 0.25);
+}
+
+.stat-card.accent-amber {
+  border-color: rgba(251, 191, 36, 0.2);
+}
+
+.stat-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  margin-bottom: 16px;
+}
+
+.stat-icon.icon-blue {
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.stat-icon.icon-amber {
+  background: rgba(251, 191, 36, 0.12);
+}
+
+.stat-icon.icon-green {
+  background: rgba(52, 211, 153, 0.12);
+}
+
+.stat-icon.icon-purple {
+  background: rgba(167, 139, 250, 0.12);
+}
+
+.stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  font-family: 'Space Mono', monospace;
+}
+
+.stat-value.mono {
+  font-size: 22px;
+}
+
+.stat-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.stat-sub-warning {
+  color: var(--amber);
   font-style: italic;
 }
 
-.value-green { color: var(--accent-green); }
-.value-blue { color: var(--accent-blue); }
-.value-orange { color: var(--accent-orange); }
-
-.card-alert {
-  border-color: var(--accent-orange);
-  background: rgba(210, 153, 34, 0.08);
+.stat-empty {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.12);
+  font-weight: 700;
 }
 
-.card-prochain.card-highlight {
-  background: rgba(63, 185, 80, 0.12);
-  border-color: var(--accent-green);
+/* ── Prochain achat CTA block ── */
+.cta-prochain-achat {
+  background: var(--surface);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 16px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.cta-prochain-achat .cta-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.cta-prochain-achat .cta-value {
+  font-size: 28px;
+  font-weight: 700;
+  font-family: 'Space Mono', monospace;
+  color: var(--amber);
+}
+
+.cta-prochain-achat .cta-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
 }
 
 @media (max-width: 640px) {
-  .dashboard-cards {
-    gap: 0.65rem;
-    margin-bottom: 1rem;
+  .hero-value {
+    font-size: 40px;
   }
 
-  .card {
-    padding: 0.75rem 1rem;
+  .dashboard-cards .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  .card h3 {
-    margin: 0 0 0.35rem;
-    font-size: 0.7rem;
-  }
-
-  .card-value {
-    font-size: 1.3rem;
-  }
-
-  .card-detail {
-    margin: 0.35rem 0 0;
-    font-size: 0.75rem;
+  .cta-prochain-achat {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

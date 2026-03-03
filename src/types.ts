@@ -18,3 +18,10 @@ export interface AppData {
 }
 
 export type TabId = 'dashboard' | 'historique' | 'achats';
+
+/** Paramètres pour l’IA de prévision (clé API, modèle, etc.). */
+export interface AiSettings {
+  apiKey: string;
+  baseUrl?: string;
+  model?: string;
+}

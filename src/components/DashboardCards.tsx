@@ -1,16 +1,24 @@
 import {
   getRelevesTries,
   getPrixMoyenArPerKwh,
-  getTauxJournalierPrediction,
-  getDateEpuisementEstimee,
-  getJoursRestants,
-  getProchainAchatSuggere,
   getCoutMensuelEstime,
-  isAlerteCreditFaible,
   isPrevisionPeuFiable,
 } from '../lib/calculs';
 import type { AppData } from '../types';
+import { usePrevision } from '../context/PrevisionContext';
+import { useLayoutActions } from '../context/LayoutContext';
+import ArcGauge from './ArcGauge';
 import './DashboardCards.css';
+
+const MAX_CREDIT_GAUGE = 100;
+
+type CreditStatus = 'healthy' | 'warning' | 'critical';
+
+function getCreditStatus(pct: number): CreditStatus {
+  if (pct > 0.3) return 'healthy';
+  if (pct > 0.1) return 'warning';
+  return 'critical';
+}
 
 interface DashboardCardsProps {
   data: AppData;
@@ -18,91 +26,258 @@ interface DashboardCardsProps {
 
 export default function DashboardCards({ data }: DashboardCardsProps) {
   const { releves, achats } = data;
+  const prevision = usePrevision();
+  const { tauxJournalier, joursRestants, loading: previsionLoading } = prevision;
   const tries = getRelevesTries(releves);
   const dernierReleve = tries[tries.length - 1];
   const creditRestant = dernierReleve?.creditRestantKwh ?? 0;
   const dateDernierReleve = dernierReleve?.date;
 
+  const maxCredit = Math.max(
+    MAX_CREDIT_GAUGE,
+    ...tries.map((r) => r.creditRestantKwh),
+    1
+  );
+  const pct = creditRestant / maxCredit;
+  const creditStatus = getCreditStatus(pct);
+
   const prixMoyen = getPrixMoyenArPerKwh(achats);
-  const tauxJournalier = getTauxJournalierPrediction(releves);
-  const dateEpuisement =
-    tauxJournalier != null && tauxJournalier > 0 && dateDernierReleve
-      ? getDateEpuisementEstimee(creditRestant, tauxJournalier, dateDernierReleve)
+  const coutMensuel =
+    tauxJournalier != null && prixMoyen != null
+      ? getCoutMensuelEstime(tauxJournalier, prixMoyen)
       : null;
-  const joursRestants = getJoursRestants(dateEpuisement);
-  const prochainAchat = getProchainAchatSuggere(dateEpuisement);
-  const coutMensuel = tauxJournalier != null && prixMoyen != null
-    ? getCoutMensuelEstime(tauxJournalier, prixMoyen)
-    : null;
-  const kwhMoisEstime = tauxJournalier != null ? Math.round(tauxJournalier * 30 * 10) / 10 : null;
-  const alerte = isAlerteCreditFaible(creditRestant, joursRestants ?? 0);
+  const kwhMoisEstime =
+    tauxJournalier != null
+      ? Math.round(tauxJournalier * 30 * 10) / 10
+      : null;
   const previsionPeuFiable = isPrevisionPeuFiable(releves);
 
+  const isEmpty = releves.length === 0;
   const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    new Date(d).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
 
   return (
     <div className="dashboard-cards">
-      <div className={`card card-credit ${alerte ? 'card-alert' : ''}`}>
-        <h3>CRÉDIT RESTANT</h3>
-        <p className="card-value value-green">{creditRestant} kWh</p>
-        {dateDernierReleve && (
-          <p className="card-detail">{formatDate(dateDernierReleve)}</p>
+      {/* Hero — Crédit restant */}
+      <div className="hero-card">
+        <div className="hero-top">
+          <div>
+            <div className="hero-label">CRÉDIT RESTANT</div>
+            <div
+              className={`hero-value ${isEmpty ? 'empty' : creditStatus}`}
+            >
+              {isEmpty ? '—' : creditRestant}
+              {!isEmpty && <span className="hero-unit">kWh</span>}
+            </div>
+            {isEmpty ? (
+              <div className="hero-sub" style={{ marginTop: 10 }}>
+                Ajoutez un relevé pour voir votre solde
+              </div>
+            ) : (
+              <div className="hero-sub" style={{ marginTop: 10 }}>
+                {joursRestants != null && joursRestants > 0 ? (
+                  <>Prochaine recharge suggérée dans <span>{joursRestants} jour{joursRestants !== 1 ? 's' : ''}</span></>
+                ) : (
+                  <>Solde au {dateDernierReleve && formatDate(dateDernierReleve)}</>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="gauge-wrap">
+            <ArcGauge
+              pct={isEmpty ? 0 : pct}
+              color={isEmpty ? 'critical' : creditStatus}
+            />
+            <div className="gauge-label">Niveau</div>
+          </div>
+        </div>
+
+        <div className="progress-track">
+          <div
+            className={`progress-fill ${isEmpty ? 'empty' : creditStatus}`}
+            style={{
+              width: isEmpty ? '0%' : `${Math.min(100, pct * 100)}%`,
+            }}
+          />
+        </div>
+        {!isEmpty && (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginTop: 6,
+            }}
+          >
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>0 kWh</span>
+            <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+              {Math.round(maxCredit)} kWh max
+            </span>
+          </div>
         )}
       </div>
 
-      <div className={`card card-jours ${alerte ? 'card-alert' : ''}`}>
-        <h3>JOURS RESTANTS</h3>
-        <p className="card-value value-blue">
-          {joursRestants !== null ? joursRestants : '—'}
-        </p>
-        {dateEpuisement && (
-          <p className="card-detail">Épuisé le {formatDate(dateEpuisement.toISOString())}</p>
-        )}
-      </div>
-
-      <div className="card">
-        <h3>CONSO. JOURNALIÈRE</h3>
-        <p className="card-value value-blue">
-          {tauxJournalier != null ? `${tauxJournalier.toFixed(2)} kWh/j` : '—'}
-        </p>
-        <p className="card-detail">
-          Moyenne pondérée (7j / 30j / global)
-          {previsionPeuFiable && tauxJournalier != null && (
-            <span className="card-detail-warning"> — peu fiable (moins de 3 j d’historique)</span>
+      {/* Stats grid */}
+      <div className="grid-4">
+        <div className="stat-card">
+          <div className="stat-icon icon-blue">📅</div>
+          <div className="stat-label">Jours restants</div>
+          {isEmpty ? (
+            <div className="stat-empty">—</div>
+          ) : (
+            <div
+              className="stat-value mono"
+              style={{ color: 'var(--blue)' }}
+            >
+              {joursRestants !== null ? joursRestants : '—'}
+            </div>
           )}
-        </p>
+          <div className="stat-sub">Estimation au rythme actuel</div>
+        </div>
+
+        <div className="stat-card accent-blue">
+          <div className="stat-icon icon-green">⚡</div>
+          <div className="stat-label">Conso. / jour</div>
+          {isEmpty ? (
+            <div className="stat-empty">—</div>
+          ) : (
+            <div
+              className="stat-value mono"
+              style={{ color: 'var(--green)' }}
+            >
+              {tauxJournalier != null
+                ? tauxJournalier.toFixed(2)
+                : '—'}
+              {tauxJournalier != null && (
+                <span style={{ fontSize: 13, color: 'var(--muted)' }}> kWh</span>
+              )}
+            </div>
+          )}
+          <div className="stat-sub">
+            Moy. pondérée 7j / 30j
+            {previsionLoading && <span> (IA…)</span>}
+            {!previsionLoading && previsionPeuFiable && tauxJournalier != null && (
+              <span className="stat-sub-warning">
+                {' '}
+                — peu fiable
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon icon-amber">💰</div>
+          <div className="stat-label">Prix moyen</div>
+          {isEmpty ? (
+            <div className="stat-empty">—</div>
+          ) : (
+            <div
+              className="stat-value mono"
+              style={{ color: 'var(--amber)' }}
+            >
+              {prixMoyen != null ? prixMoyen.toFixed(2).replace('.', ',') : '—'}
+              {prixMoyen != null && (
+                <span style={{ fontSize: 13, color: 'var(--muted)' }}>
+                  {' '}
+                  Ar/kWh
+                </span>
+              )}
+            </div>
+          )}
+          <div className="stat-sub">Tous achats confondus</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon icon-purple">📊</div>
+          <div className="stat-label">Coût mensuel est.</div>
+          {isEmpty ? (
+            <div className="stat-empty">—</div>
+          ) : (
+            <div
+              className="stat-value mono"
+              style={{ color: '#a78bfa' }}
+            >
+              {coutMensuel != null
+                ? coutMensuel >= 1000
+                  ? `${(coutMensuel / 1000).toFixed(2)}k`
+                  : coutMensuel.toFixed(2).replace('.', ',')
+                : '—'}
+              {coutMensuel != null && (
+                <span style={{ fontSize: 13, color: 'var(--muted)' }}>
+                  {' '}
+                  Ar
+                </span>
+              )}
+            </div>
+          )}
+          <div className="stat-sub">
+            {kwhMoisEstime != null
+              ? `Basé sur ~${kwhMoisEstime.toFixed(2)} kWh / 30j`
+              : 'Basé sur 30 jours'}
+          </div>
+        </div>
       </div>
 
-      <div className="card">
-        <h3>PRIX MOYEN</h3>
-        <p className="card-value value-orange">
-          {prixMoyen != null ? `${Math.round(prixMoyen).toLocaleString('fr-FR')} Ar/kWh` : '—'}
-        </p>
-        <p className="card-detail">Tous achats confondus</p>
-      </div>
+    </div>
+  );
+}
 
-      <div className="card">
-        <h3>COÛT MENSUEL ESTIMÉ</h3>
-        <p className="card-value value-orange">
-          {coutMensuel != null ? `${coutMensuel.toLocaleString('fr-FR')} Ar` : '—'}
-        </p>
-        {kwhMoisEstime != null && (
-          <p className="card-detail">~ {kwhMoisEstime} kWh/mois</p>
+export function ProchainAchatCTA({ data }: { data: AppData }) {
+  const layoutActions = useLayoutActions();
+  const { releves } = data;
+  const prevision = usePrevision();
+  const { prochainAchatDate, kwhAchatSuggere, joursRestants } = prevision;
+  const isEmpty = releves.length === 0;
+  const formatDate = (d: string) =>
+    new Date(d).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  const joursAvantAchat =
+    prochainAchatDate && joursRestants != null
+      ? Math.max(0, joursRestants - 3)
+      : null;
+
+  return (
+    <div className="cta-prochain-achat">
+      <div>
+        <div className="cta-label">⚡ Prochain achat suggéré</div>
+        {isEmpty ? (
+          <div className="cta-sub">
+            En attente de données de consommation…
+          </div>
+        ) : (
+          <>
+            <div className="cta-value">
+              {kwhAchatSuggere != null
+                ? `${kwhAchatSuggere} kWh`
+                : prochainAchatDate
+                  ? formatDate(prochainAchatDate.toISOString())
+                  : '—'}
+            </div>
+            <div className="cta-sub">
+              {joursAvantAchat != null && joursAvantAchat >= 0
+                ? `dans environ ${joursAvantAchat} jour${joursAvantAchat !== 1 ? 's' : ''}`
+                : prochainAchatDate
+                  ? '3 jours avant épuisement'
+                  : '—'}
+            </div>
+          </>
         )}
       </div>
-
-      <div className="card card-prochain card-highlight">
-        <h3>PROCHAIN ACHAT SUGGÉRÉ</h3>
-        <p className="card-value value-green">
-          {prochainAchat ? formatDate(prochainAchat.toISOString()) : '—'}
-        </p>
-        {joursRestants != null && (
-          <p className="card-detail">
-            {joursRestants >= 3 ? '3 jours avant épuisement' : 'Épuisement proche'}
-          </p>
-        )}
-      </div>
+      {!isEmpty && (
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => layoutActions?.openAchat()}
+        >
+          Acheter maintenant
+        </button>
+      )}
     </div>
   );
 }

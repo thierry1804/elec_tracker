@@ -9,11 +9,9 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import {
-  getDonneesGraphiqueSolde,
-  getDonneesPrevisionAvecIntervalle,
-} from '../lib/calculs';
+import { getDonneesGraphiqueSolde } from '../lib/calculs';
 import type { Releve } from '../types';
+import { usePrevision } from '../context/PrevisionContext';
 import './Charts.css';
 
 interface SoldeChartProps {
@@ -31,13 +29,22 @@ interface ChartPoint {
 
 export default function SoldeChart({ releves }: SoldeChartProps) {
   const actualData = getDonneesGraphiqueSolde(releves);
-  const forecastWithInterval = getDonneesPrevisionAvecIntervalle(releves);
+  const prevision = usePrevision();
+  const forecastWithInterval =
+    prevision.donneesPrevision.length > 0
+      ? prevision.donneesPrevision
+      : [];
 
   if (actualData.length === 0) {
     return (
-      <div className="chart-container chart-empty">
-        <h3>ÉVOLUTION DU SOLDE (kWh)</h3>
-        <p>Ajoutez des relevés pour afficher le graphique.</p>
+      <div className="chart-container">
+        <div className="chart-header">
+          <span className="chart-title">Évolution du solde (kWh)</span>
+        </div>
+        <div className="chart-empty">
+          <div className="chart-empty-icon">📈</div>
+          <div className="chart-empty-text">Ajoutez des relevés pour voir l'évolution</div>
+        </div>
       </div>
     );
   }
@@ -66,7 +73,9 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
 
   return (
     <div className="chart-container">
-      <h3>ÉVOLUTION DU SOLDE (kWh)</h3>
+      <div className="chart-header">
+        <span className="chart-title">Évolution du solde (kWh)</span>
+      </div>
       <ResponsiveContainer width="100%" height={280}>
         <ComposedChart data={dataWithPrevision} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -81,10 +90,10 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
             contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
             labelFormatter={(v) => new Date(v).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
             formatter={(value: number, name: string) => {
-              if (name === 'solde') return [`${value} kWh`, 'Solde'];
-              if (name === 'prevision') return [`${value} kWh`, 'Prévision'];
+              if (name === 'solde') return [`${Number(value).toFixed(2)} kWh`, 'Solde'];
+              if (name === 'prevision') return [`${Number(value).toFixed(2)} kWh`, 'Prévision'];
               if (name === 'intervalle') return null;
-              return [value, name];
+              return [typeof value === 'number' ? value.toFixed(2) : value, name];
             }}
           />
           <Legend
@@ -123,7 +132,7 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
             name="solde"
             stroke="var(--accent-blue)"
             strokeWidth={2}
-            dot={{ fill: 'var(--accent-blue)', r: 4 }}
+            dot={false}
             connectNulls={false}
           />
           <Line
@@ -133,7 +142,7 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
             stroke="var(--accent-orange)"
             strokeWidth={2}
             strokeDasharray="5 5"
-            dot={{ fill: 'var(--accent-orange)', r: 3 }}
+            dot={false}
             connectNulls={true}
           />
         </ComposedChart>
