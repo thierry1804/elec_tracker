@@ -11,6 +11,29 @@
   font-family: 'Space Mono', 'Syne', sans-serif;
 }
 
+/* Légendes lisibles sur fond sombre */
+.chart-container .recharts-default-legend .recharts-legend-item-text {
+  fill: var(--text) !important;
+}
+
+/* Tooltip personnalisé (texte visible) */
+.chart-tooltip {
+  color: var(--text);
+  padding: 2px 0;
+}
+
+.chart-tooltip-label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.chart-tooltip-item {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
 .chart-header {
   display: flex;
   align-items: center;

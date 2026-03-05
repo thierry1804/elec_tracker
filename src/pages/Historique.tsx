@@ -10,8 +10,19 @@ export default function Historique() {
     if (window.confirm('Supprimer ce relevé ?')) deleteReleve(id);
   };
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const formatDateHeure = (d: string) => {
+    const date = new Date(d);
+    const hasTime = d.length > 10 && d.includes('T');
+    return hasTime
+      ? date.toLocaleString('fr-FR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
 
   const formatDuree = (nbJours: number) =>
     nbJours < 1
@@ -33,7 +44,7 @@ export default function Historique() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>Date</th>
+              <th>Date et heure</th>
               <th>Crédit restant (kWh)</th>
               <th>Consommation calculée (kWh)</th>
               <th aria-label="Actions"></th>
@@ -45,7 +56,7 @@ export default function Historique() {
               const conso = revIndex > 0 ? consos[revIndex - 1] : null;
               return (
                 <tr key={releve.id}>
-                  <td>{formatDate(releve.date)}</td>
+                  <td>{formatDateHeure(releve.date)}</td>
                   <td>{releve.creditRestantKwh}</td>
                   <td>
                     {conso != null
@@ -55,12 +66,12 @@ export default function Historique() {
                   <td>
                     <button
                       type="button"
-                      className="btn-delete"
+                      className="btn-delete btn-delete-icon"
                       onClick={() => handleDelete(releve.id)}
                       title="Supprimer ce relevé"
                       aria-label="Supprimer ce relevé"
                     >
-                      Supprimer
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                     </button>
                   </td>
                 </tr>

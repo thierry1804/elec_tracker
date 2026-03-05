@@ -9,10 +9,16 @@ interface ReleveFormProps {
   onClose: () => void;
 }
 
+function toTimeString(d: Date) {
+  return d.toTimeString().slice(0, 5); // "HH:mm"
+}
+
 export default function ReleveForm({ onClose }: ReleveFormProps) {
   const { addReleve } = useApp();
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const todayIso = now.toISOString().slice(0, 10);
   const [dateIso, setDateIso] = useState(todayIso);
+  const [timeStr, setTimeStr] = useState(toTimeString(now));
   const [creditRestantKwh, setCreditRestantKwh] = useState('');
   const [calendarOpen, setCalendarOpen] = useState(false);
 
@@ -20,7 +26,10 @@ export default function ReleveForm({ onClose }: ReleveFormProps) {
     e.preventDefault();
     const kwh = parseFloat(creditRestantKwh.replace(',', '.'));
     if (Number.isFinite(kwh) && kwh >= 0) {
-      addReleve(dateIso, kwh);
+      const [h, m] = timeStr.split(':').map(Number);
+      const dateHeure = new Date(dateIso + 'T00:00:00');
+      dateHeure.setHours(h, m, 0, 0);
+      addReleve(dateHeure.toISOString(), kwh);
       onClose();
     }
   };
@@ -30,7 +39,6 @@ export default function ReleveForm({ onClose }: ReleveFormProps) {
   const handleDateChange = (d: Date | null) => {
     if (d) {
       setDateIso(d.toISOString().slice(0, 10));
-      // Fermer le calendrier au prochain tick pour éviter tout conflit avec le state du DatePicker
       setTimeout(() => setCalendarOpen(false), 0);
     }
   };
@@ -58,6 +66,15 @@ export default function ReleveForm({ onClose }: ReleveFormProps) {
               placeholderText="jj/mm/aaaa"
               className="input-datepicker"
               required
+            />
+          </label>
+          <label>
+            Heure du relevé
+            <input
+              type="time"
+              value={timeStr}
+              onChange={(e) => setTimeStr(e.target.value)}
+              className="input-time"
             />
           </label>
           <label>

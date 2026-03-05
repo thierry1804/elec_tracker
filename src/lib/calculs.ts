@@ -364,9 +364,22 @@ export function getDonneesPrevisionAvecIntervalleFromTaux(
   return result;
 }
 
-export function getDonneesGraphiqueConso(releves: Releve[]): { label: string; conso: number }[] {
-  return getConsommationsEntreReleves(releves).map((c) => ({
-    label: new Date(c.dateFin).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
-    conso: Math.round(c.kwhConsommes * 100) / 100,
-  }));
+/**
+ * Données du graphique de consommation, regroupées par jour calendaire
+ * (plusieurs intervalles entre relevés le même jour sont additionnés).
+ */
+export function getDonneesGraphiqueConso(releves: Releve[]): { label: string; conso: number; dateIso: string }[] {
+  const consos = getConsommationsEntreReleves(releves);
+  const parJour = new Map<string, number>();
+  for (const c of consos) {
+    const jour = new Date(c.dateFin).toISOString().slice(0, 10);
+    parJour.set(jour, (parJour.get(jour) ?? 0) + c.kwhConsommes);
+  }
+  return [...parJour.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([dateIso, kwh]) => ({
+      dateIso,
+      label: new Date(dateIso + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+      conso: Math.round(kwh * 100) / 100,
+    }));
 }

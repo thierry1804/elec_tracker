@@ -119,6 +119,7 @@
 }
 
 .modal-form .input-datepicker,
+.modal-form .input-time,
 .modal-form .react-datepicker-wrapper input {
   display: block;
   width: 100%;

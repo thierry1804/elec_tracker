@@ -9,10 +9,41 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
+import type { TooltipProps } from 'recharts';
 import { getDonneesGraphiqueSolde } from '../lib/calculs';
 import type { Releve } from '../types';
 import { usePrevision } from '../context/PrevisionContext';
 import './Charts.css';
+
+const TOOLTIP_HIDDEN_KEYS = ['previsionMin', 'bandHeight'];
+
+function SoldeTooltipContent({ active, payload, label }: TooltipProps<number, string>) {
+  if (!active || !payload?.length) return null;
+  const filtered = payload.filter((p) => p.dataKey && !TOOLTIP_HIDDEN_KEYS.includes(String(p.dataKey)));
+  if (filtered.length === 0) return null;
+  const labelNames: Record<string, string> = {
+    solde: 'Solde',
+    prevision: 'Prévision',
+    intervalle: 'Intervalle de confiance',
+  };
+  return (
+    <div className="chart-tooltip">
+      <div className="chart-tooltip-label">
+        {label && new Date(label).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+      </div>
+      {filtered.map((entry) => {
+        const name = labelNames[String(entry.dataKey)] ?? String(entry.dataKey);
+        const value = entry.value;
+        if (value == null || (typeof value === 'number' && Number.isNaN(value))) return null;
+        return (
+          <div key={String(entry.dataKey)} className="chart-tooltip-item" style={{ color: entry.color }}>
+            {name}: {typeof value === 'number' ? value.toFixed(2) : value} kWh
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 interface SoldeChartProps {
   releves: Releve[];
@@ -87,16 +118,11 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
           />
           <YAxis stroke="var(--text-secondary)" fontSize={12} />
           <Tooltip
-            contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-            labelFormatter={(v) => new Date(v).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-            formatter={(value: number, name: string) => {
-              if (name === 'solde') return [`${Number(value).toFixed(2)} kWh`, 'Solde'];
-              if (name === 'prevision') return [`${Number(value).toFixed(2)} kWh`, 'Prévision'];
-              if (name === 'intervalle') return null;
-              return [typeof value === 'number' ? value.toFixed(2) : value, name];
-            }}
+            content={<SoldeTooltipContent />}
+            contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text)' }}
           />
           <Legend
+            wrapperStyle={{ color: 'var(--text)' }}
             formatter={(value) =>
               value === 'solde'
                 ? 'Solde réel'
@@ -115,14 +141,25 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
                 stackId="band"
                 fill="var(--bg-dark)"
                 stroke="none"
+                legendType="none"
               />
               <Area
                 type="monotone"
                 dataKey="bandHeight"
                 stackId="band"
-                fill="rgba(210, 153, 34, 0.2)"
+                fill="rgba(210, 153, 34, 0.35)"
                 stroke="none"
                 name="intervalle"
+              />
+              <Line
+                type="monotone"
+                dataKey="previsionMin"
+                stroke="rgba(210, 153, 34, 0.85)"
+                strokeWidth={1.5}
+                strokeDasharray="4 4"
+                dot={false}
+                connectNulls={true}
+                legendType="none"
               />
             </>
           )}

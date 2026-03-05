@@ -77,6 +77,10 @@
   margin-left: 8px;
 }
 
+.badge-prepaye-short {
+  display: none;
+}
+
 .date {
   font-size: 12px;
   color: var(--muted);
@@ -88,6 +92,54 @@
   display: flex;
   gap: 10px;
   flex-shrink: 0;
+}
+
+/* Hamburger menu (visible only on small screens) */
+.header-menu-wrap {
+  display: none;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.header-menu-trigger {
+  padding: 8px 10px;
+}
+
+.header-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  padding: 6px;
+  background: var(--bg-card, rgba(20, 25, 45, 0.98));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.header-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  justify-content: flex-start;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.header-menu-item span {
+  white-space: nowrap;
+}
+
+.header-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .btn {
@@ -123,13 +175,29 @@
 .btn-icon {
   padding: 8px 10px;
   background: transparent;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--muted);
 }
 
 .btn-icon:hover {
   color: var(--text);
   border-color: rgba(255, 255, 255, 0.15);
+}
+
+.btn-icon.header-menu-trigger,
+.btn-icon.header-menu-trigger:hover,
+.btn-icon.header-menu-trigger:active,
+.btn-icon.header-menu-trigger:focus {
+  border: none !important;
+  box-shadow: none;
+}
+
+.header-actions-desk .btn,
+.header-actions-desk .btn:hover,
+.header-actions-desk .btn:active,
+.header-actions-desk .btn:focus {
+  border: none !important;
+  box-shadow: none;
 }
 
 /* ── Tabs ── */
@@ -174,14 +242,19 @@
   .header {
     padding: 12px 16px;
     gap: 0.4rem;
-  }
-
-  .header-left {
-    flex: 1 1 100%;
+    flex-wrap: nowrap;
   }
 
   .logo-name {
     font-size: 1.15rem;
+  }
+
+  .badge-prepaye-full {
+    display: none !important;
+  }
+
+  .badge-prepaye-short {
+    display: inline-block !important;
   }
 
   .badge-prepaye {
@@ -195,8 +268,22 @@
     padding-left: 42px;
   }
 
+  .header-left {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .header-actions-desk {
+    display: none !important;
+  }
+
+  .header-menu-wrap {
+    display: block;
+    flex-shrink: 0;
+  }
+
   .header-actions {
-    width: 100%;
+    width: auto;
     justify-content: flex-end;
   }
 
