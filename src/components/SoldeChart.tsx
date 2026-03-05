@@ -47,6 +47,8 @@ function SoldeTooltipContent({ active, payload, label }: TooltipProps<number, st
 
 interface SoldeChartProps {
   releves: Releve[];
+  /** Limiter aux N derniers jours (optionnel). */
+  periodeJours?: number;
 }
 
 interface ChartPoint {
@@ -58,8 +60,14 @@ interface ChartPoint {
   bandHeight: number;
 }
 
-export default function SoldeChart({ releves }: SoldeChartProps) {
-  const actualData = getDonneesGraphiqueSolde(releves);
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+export default function SoldeChart({ releves, periodeJours }: SoldeChartProps) {
+  let actualData = getDonneesGraphiqueSolde(releves);
+  if (periodeJours != null && periodeJours > 0) {
+    const limit = Date.now() - periodeJours * MS_PER_DAY;
+    actualData = actualData.filter((p) => new Date(p.date).getTime() >= limit);
+  }
   const prevision = usePrevision();
   const forecastWithInterval =
     prevision.donneesPrevision.length > 0

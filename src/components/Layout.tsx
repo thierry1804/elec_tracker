@@ -3,6 +3,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import ReleveForm from './ReleveForm';
 import AchatForm from './AchatForm';
 import SettingsModal from './SettingsModal';
+import ReminderChecker from './ReminderChecker';
 import { LayoutActionsProvider } from '../context/LayoutContext';
 import { PrevisionProvider } from '../context/PrevisionContext';
 import { useApp } from '../context/AppContext';
@@ -68,6 +69,7 @@ export default function Layout() {
 
   return (
     <PrevisionProvider releves={data.releves}>
+    <ReminderChecker />
     <LayoutActionsProvider value={layoutActions}>
     <div className="layout">
       <div className="layout-sticky">

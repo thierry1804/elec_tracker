@@ -11,12 +11,20 @@ import { getDonneesGraphiqueConso } from '../lib/calculs';
 import type { Releve } from '../types';
 import './Charts.css';
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
 interface ConsommationChartProps {
   releves: Releve[];
+  /** Limiter aux N derniers jours (optionnel). */
+  periodeJours?: number;
 }
 
-export default function ConsommationChart({ releves }: ConsommationChartProps) {
-  const data = getDonneesGraphiqueConso(releves);
+export default function ConsommationChart({ releves, periodeJours }: ConsommationChartProps) {
+  let data = getDonneesGraphiqueConso(releves);
+  if (periodeJours != null && periodeJours > 0) {
+    const limit = Date.now() - periodeJours * MS_PER_DAY;
+    data = data.filter((p) => new Date(p.dateIso).getTime() >= limit);
+  }
 
   if (data.length === 0) {
     return (

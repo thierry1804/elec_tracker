@@ -11,8 +11,9 @@
   left: 0;
   right: 0;
   z-index: 50;
-  background: rgba(13, 17, 32, 0.9);
+  background: var(--header-bg);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
 
@@ -61,7 +62,7 @@
   font-size: 17px;
   font-weight: 800;
   letter-spacing: -0.5px;
-  color: var(--text);
+  color: var(--text-primary);
 }
 
 .badge-prepaye {
@@ -70,9 +71,9 @@
   letter-spacing: 1.5px;
   padding: 3px 7px;
   border-radius: 4px;
-  background: rgba(56, 189, 248, 0.15);
+  background: var(--badge-bg, rgba(56, 189, 248, 0.15));
   color: var(--blue);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  border: 1px solid var(--badge-border, rgba(56, 189, 248, 0.3));
   text-transform: uppercase;
   margin-left: 8px;
 }

@@ -264,6 +264,33 @@
   margin-top: 4px;
 }
 
+/* ── Indicateurs objectif / budget ── */
+.budget-indicators {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.budget-indicator {
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+}
+
+.budget-indicator.budget-ok {
+  background: rgba(52, 211, 153, 0.15);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  color: var(--green);
+}
+
+.budget-indicator.budget-over {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  color: var(--red);
+}
+
 @media (max-width: 640px) {
   .hero-value {
     font-size: 40px;
@@ -277,4 +304,115 @@
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* ── Dashboard Analytics (fancy stats) ── */
+.dashboard-analytics {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.analytics-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin: 0 0 1rem;
+}
+
+.analytics-block {
+  margin-bottom: 1rem;
+}
+
+.analytics-block:last-child {
+  margin-bottom: 0;
+}
+
+.analytics-block-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+
+.analytics-resume {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+}
+
+.analytics-resume-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.analytics-resume-label {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.analytics-resume-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+}
+
+.analytics-comparison,
+.analytics-tendance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.analytics-comparison-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.analytics-value {
+  font-size: 0.9rem;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.analytics-sub {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.analytics-evolution {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+}
+
+.analytics-evolution.evolution-up {
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--red);
+}
+
+.analytics-evolution.evolution-down {
+  background: rgba(52, 211, 153, 0.15);
+  color: var(--green);
+}
+
+.analytics-evolution.evolution-neutral {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
 }

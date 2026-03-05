@@ -25,3 +25,15 @@ export interface AiSettings {
   baseUrl?: string;
   model?: string;
 }
+
+/** Objectif / budget mensuel (optionnel). */
+export interface AppSettings {
+  budgetMensuelAr?: number;
+  objectifKwhMois?: number;
+  /** Unité d'affichage des montants. */
+  uniteAffichage?: 'ar' | 'kar';
+  /** Arrondi des montants. */
+  arrondiMontant?: 'entier' | 'decimales';
+  /** Période par défaut des graphiques (jours ou tout). */
+  periodeGraphiques?: '7' | '30' | '90' | 'tout';
+}

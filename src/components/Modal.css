@@ -29,6 +29,15 @@
   animation: modalIn 0.25s ease;
 }
 
+.modal-settings {
+  max-width: 480px;
+  box-shadow: var(--shadow-lg), 0 24px 48px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .modal-settings {
+  box-shadow: var(--shadow-lg), 0 24px 48px rgba(0, 0, 0, 0.08);
+}
+
 @keyframes modalIn {
   from {
     opacity: 0;
@@ -85,6 +94,29 @@
 
 .modal-form label:last-of-type {
   margin-bottom: 1.5rem;
+}
+
+.modal-form > div {
+  margin-bottom: 1.25rem;
+}
+
+.modal-form > div > label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.modal-form > div:last-of-type {
+  margin-bottom: 1.5rem;
+}
+
+.field-error {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--accent-red);
+}
+
+.input-invalid {
+  border-color: var(--accent-red) !important;
 }
 
 .modal-form input {
@@ -210,6 +242,12 @@
   color: var(--text-primary);
 }
 
+.btn-secondary.active {
+  background: var(--accent-blue);
+  color: #fff;
+  border-color: var(--accent-blue);
+}
+
 .btn-primary {
   background: var(--accent-blue);
   color: #fff;
@@ -226,4 +264,476 @@
   padding: 0.55rem 1.15rem;
   border-radius: var(--radius);
   font-weight: 500;
+}
+
+/* Paramètres (sections multiples) */
+.modal-settings .modal-form {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.modal-settings .modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-settings .modal-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.settings-section {
+  margin-bottom: 0;
+}
+
+.settings-card {
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.35rem;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.settings-card:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] .settings-card:hover {
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.settings-card-title {
+  margin: 0 0 0.35rem !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em;
+  color: var(--text-primary) !important;
+}
+
+.settings-card-title-with-icon {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.settings-card-title-with-icon svg {
+  color: var(--accent-blue);
+  flex-shrink: 0;
+}
+
+.settings-hint-inline {
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+  font-size: 0.75rem;
+}
+
+.settings-hint {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  margin: 0 0 1rem;
+  line-height: 1.45;
+}
+
+.settings-card .settings-hint:last-child {
+  margin-bottom: 0;
+}
+
+.settings-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.settings-row:last-child {
+  margin-bottom: 0;
+}
+
+.settings-row-vertical {
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Section Sauvegarde : grille de boutons alignés, même taille */
+.backup-last-save {
+  margin-bottom: 0.75rem !important;
+}
+
+.backup-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.backup-actions .backup-btn {
+  min-height: 2.5rem;
+  padding: 0.55rem 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.backup-actions .backup-btn svg {
+  flex-shrink: 0;
+}
+
+.backup-actions label.backup-btn {
+  margin: 0;
+  text-align: center;
+}
+
+.backup-actions label.backup-btn-import {
+  cursor: pointer;
+}
+
+/* Section Prévision IA : champs et boutons alignés au design global */
+.ai-settings-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.ai-field-row label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.35rem;
+}
+
+.ai-field-row input,
+.ai-field-row select {
+  width: 100%;
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.ai-field-row select {
+  cursor: pointer;
+  appearance: auto;
+}
+
+.ai-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.ai-actions .ai-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  padding: 0.55rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius);
+  white-space: nowrap;
+}
+
+.ai-actions .ai-action-btn svg {
+  flex-shrink: 0;
+}
+
+.ai-actions .ai-action-btn-icon-only {
+  width: 2.5rem;
+  min-width: 2.5rem;
+  padding: 0.55rem;
+  justify-content: center;
+}
+
+/* Contrôle segmenté thème (moderne) */
+.theme-toggle {
+  display: flex;
+  width: 100%;
+  max-width: 220px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 0;
+}
+
+.theme-toggle-three {
+  max-width: 100%;
+}
+
+.theme-toggle-option {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+  font-family: inherit;
+}
+
+.theme-toggle-option svg {
+  flex-shrink: 0;
+}
+
+.theme-toggle-option:hover {
+  color: var(--text-primary);
+}
+
+.theme-toggle-option-active {
+  background: var(--accent-blue);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-toggle-option-active:hover {
+  color: #fff;
+  filter: brightness(1.06);
+}
+
+.settings-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.settings-checkbox input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--accent-blue);
+}
+
+/* Rappels — même grille que les autres cartes, contenu compact */
+.settings-card .reminder-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.reminder-toggle-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.reminder-toggle-track {
+  display: inline-flex;
+  align-items: center;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  transition: background 0.2s ease, border-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.reminder-toggle-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  margin-left: 2px;
+  transition: margin 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.reminder-toggle-input:checked + .reminder-toggle-track {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+.reminder-toggle-input:checked + .reminder-toggle-track .reminder-toggle-thumb {
+  margin-left: 18px;
+  background: #fff;
+}
+
+.reminder-toggle-input:focus-visible + .reminder-toggle-track {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.reminder-toggle-text {
+  user-select: none;
+}
+
+.reminder-days-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.25rem;
+}
+
+.reminder-days-inline .reminder-days-label,
+.reminder-days-inline .reminder-days-input {
+  align-self: center;
+  margin: 0 !important;
+  margin-top: 0 !important;
+}
+
+.reminder-days-inline .reminder-days-label {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  height: 1.75rem;
+  line-height: 1.75rem;
+  flex-shrink: 0;
+}
+
+.reminder-days-inline .reminder-days-input {
+  width: 3rem;
+  height: 1.75rem;
+  min-height: 1.75rem;
+  padding: 0 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.75rem;
+  text-align: center;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: inherit;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+.reminder-days-inline .reminder-days-input:focus {
+  border-color: var(--accent-blue);
+  outline: none;
+}
+
+.settings-hint-inline {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.settings-error {
+  font-size: 0.875rem;
+  color: var(--accent-red);
+  margin: 0 0 0.75rem;
+}
+
+.import-summary {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.import-summary p {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+.import-summary .modal-actions {
+  margin-top: 1rem;
+}
+
+/* Champs dans les cartes paramètres (sauf rappels : champ "jours" aligné en ligne) */
+.settings-card input[type="text"]:not(.objective-field-input),
+.settings-card input[type="number"]:not(.reminder-days-input),
+.settings-card input[type="password"],
+.settings-card input[type="url"]:not(.objective-field-input) {
+  margin-top: 0.4rem;
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.settings-card label:not(.objective-field-label) {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+/* Objectif mensuel : lignes label + champ alignées (comme Rappels) */
+.objective-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.objective-field-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.objective-field-row .objective-field-label,
+.objective-field-row .objective-field-input {
+  align-self: center;
+  margin: 0 !important;
+}
+
+.objective-field-row .objective-field-label {
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  min-height: 2.25rem;
+  line-height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.objective-field-row .objective-field-input {
+  width: 100%;
+  max-width: 10rem;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0 0.6rem;
+  font-size: 0.9rem;
+  line-height: 2.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: inherit;
+  box-sizing: border-box;
 }

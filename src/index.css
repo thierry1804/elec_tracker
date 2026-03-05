@@ -1,4 +1,5 @@
-:root {
+:root,
+[data-theme="dark"] {
   --bg: #07090f;
   --surface: #0d1120;
   --border: rgba(255, 255, 255, 0.07);
@@ -27,6 +28,37 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
   --transition: 0.2s ease;
+  --header-bg: rgba(13, 17, 32, 0.92);
+}
+
+[data-theme="light"] {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --border: rgba(0, 0, 0, 0.1);
+  --blue: #0284c7;
+  --amber: #d97706;
+  --green: #059669;
+  --red: #dc2626;
+  --text: #0f172a;
+  --muted: #64748b;
+  --label: #475569;
+
+  --bg-dark: #e2e8f0;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --accent-blue: #0284c7;
+  --accent-green: #059669;
+  --accent-orange: #d97706;
+  --accent-red: #dc2626;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --header-bg: rgba(255, 255, 255, 0.92);
+  --badge-bg: rgba(2, 132, 199, 0.12);
+  --badge-border: rgba(2, 132, 199, 0.35);
 }
 
 * {
@@ -263,4 +295,30 @@ select {
 .btn-delete-icon:hover {
   background: rgba(248, 113, 113, 0.15);
   color: var(--accent-red);
+}
+
+.table-actions {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.btn-edit,
+.btn-edit-icon {
+  padding: 0.35rem;
+  color: var(--accent-blue);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition), color var(--transition);
+}
+
+.btn-edit:hover,
+.btn-edit-icon:hover {
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--accent-blue);
 }

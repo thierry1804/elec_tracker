@@ -4,6 +4,7 @@ import {
   getCoutMensuelEstime,
   isPrevisionPeuFiable,
 } from '../lib/calculs';
+import { loadSettings } from '../lib/storage';
 import type { AppData } from '../types';
 import { usePrevision } from '../context/PrevisionContext';
 import { useLayoutActions } from '../context/LayoutContext';
@@ -51,6 +52,26 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
       ? Math.round(tauxJournalier * 30 * 10) / 10
       : null;
   const previsionPeuFiable = isPrevisionPeuFiable(releves);
+
+  const settings = loadSettings();
+  const budgetAr = settings.budgetMensuelAr;
+  const objectifKwh = settings.objectifKwhMois;
+  const budgetOk =
+    budgetAr != null && coutMensuel != null
+      ? coutMensuel <= budgetAr
+      : null;
+  const objectifKwhOk =
+    objectifKwh != null && kwhMoisEstime != null
+      ? kwhMoisEstime <= objectifKwh
+      : null;
+  const depassementAr =
+    budgetAr != null && coutMensuel != null && coutMensuel > budgetAr
+      ? Math.round(coutMensuel - budgetAr)
+      : null;
+  const depassementKwh =
+    objectifKwh != null && kwhMoisEstime != null && kwhMoisEstime > objectifKwh
+      ? Math.round((kwhMoisEstime - objectifKwh) * 10) / 10
+      : null;
 
   const isEmpty = releves.length === 0;
   const formatDate = (d: string) =>
@@ -221,6 +242,35 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
         </div>
       </div>
 
+      {/* Indicateurs objectif / budget */}
+      {(budgetAr != null || objectifKwh != null) && !isEmpty && (
+        <div className="budget-indicators">
+          {budgetAr != null && coutMensuel != null && (
+            <div
+              className={`budget-indicator ${budgetOk ? 'budget-ok' : 'budget-over'}`}
+              role="status"
+            >
+              {budgetOk ? (
+                <>Budget : dans la cible</>
+              ) : (
+                <>Dépassement : +{depassementAr?.toLocaleString('fr-FR')} Ar</>
+              )}
+            </div>
+          )}
+          {objectifKwh != null && kwhMoisEstime != null && (
+            <div
+              className={`budget-indicator ${objectifKwhOk ? 'budget-ok' : 'budget-over'}`}
+              role="status"
+            >
+              {objectifKwhOk ? (
+                <>Consommation : dans la cible</>
+              ) : (
+                <>Au-dessus de l'objectif : +{depassementKwh} kWh</>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
