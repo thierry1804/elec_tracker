@@ -4,7 +4,6 @@ import {
   useMemo,
   useState,
   useEffect,
-  useRef,
 } from 'react';
 import type { Releve } from '../types';
 import {
@@ -111,26 +110,20 @@ export function PrevisionProvider({
 }) {
   const fallback = useMemo(() => computeFallback(releves), [releves]);
   const [result, setResult] = useState<PrevisionResult>(fallback);
-  const abortRef = useRef<AbortController | null>(null);
-  const prevRelevesRef = useRef<string>('');
 
   useEffect(() => {
-    const relevesKey = JSON.stringify(releves.map((r) => r.date + r.creditRestantKwh));
     const fallbackResult = computeFallback(releves);
-
     const settings = loadAiSettings();
+
     if (!settings?.apiKey || releves.length < 2) {
-      setResult({ ...fallbackResult, loading: false });
+      setResult({ ...fallbackResult, loading: false, error: null });
       return;
     }
 
     setResult({ ...fallbackResult, loading: true, error: null });
 
-    if (relevesKey === prevRelevesRef.current) return;
-    prevRelevesRef.current = relevesKey;
-
-    abortRef.current = new AbortController();
-    const signal = abortRef.current.signal;
+    const controller = new AbortController();
+    const { signal } = controller;
 
     fetchPrevisionTaux(settings, releves, signal)
       .then((taux) => {
@@ -138,21 +131,19 @@ export function PrevisionProvider({
         if (taux != null && taux > 0) {
           setResult(buildFromTaux(releves, taux, 'ai'));
         } else {
-          setResult({ ...fallbackResult, loading: false });
+          setResult({ ...computeFallback(releves), loading: false, error: null });
         }
       })
       .catch(() => {
         if (signal.aborted) return;
         setResult({
-          ...fallbackResult,
+          ...computeFallback(releves),
           loading: false,
           error: 'IA indisponible',
         });
       });
 
-    return () => {
-      abortRef.current?.abort();
-    };
+    return () => controller.abort();
   }, [releves]);
 
   const value = useMemo(() => result, [result]);

@@ -8,6 +8,21 @@ import {
 
 const MS_PAR_JOUR = 24 * 60 * 60 * 1000;
 
+/**
+ * Entre deux relevés, kWh = crédit avant − crédit après. Si tu as rechargé entre les deux,
+ * le solde augmente : le résultat est négatif (ce n’est pas de la « consommation »).
+ * Pour les stats d’usage, on n’agrège que la partie ≥ 0.
+ */
+function kwhConsommationUtile(kwhNet: number): number {
+  return Math.max(0, kwhNet);
+}
+
+/** Taux journalier plancher pour interpréter un % début/fin sur 30 j. */
+const MIN_TAUX_KWH_JOUR_TENDANCE = 0.08;
+
+/** Au-delà, la comparaison en deux points seulement n’est pas fiable → on n’affiche pas de %. */
+const MAX_EVOLUTION_PCT_TENDANCE = 250;
+
 /** Mois au format YYYY-MM pour clé */
 function getMoisKey(date: Date): string {
   const y = date.getFullYear();
@@ -67,7 +82,11 @@ export function getKwhEtCoutParMois(
   const consos = getConsommationsEntreReleves(releves);
   const kwhParMois = new Map<string, number>();
   for (const c of consos) {
-    const rep = repartirKwhParMois(c.dateDebut, c.dateFin, c.kwhConsommes);
+    const rep = repartirKwhParMois(
+      c.dateDebut,
+      c.dateFin,
+      kwhConsommationUtile(c.kwhConsommes)
+    );
     for (const [mois, kwh] of rep) {
       kwhParMois.set(mois, (kwhParMois.get(mois) ?? 0) + kwh);
     }
@@ -173,18 +192,32 @@ export function getComparaisonPrixMoyenCeMoisVsDernier(
   return { prixCeMois, prixMoisDernier, evolutionPct };
 }
 
-/** Évolution en % du taux journalier sur les 30 derniers jours (début vs fin de période). */
+/**
+ * Évolution en % du taux journalier sur ~30 j. : moyenne kWh/j de la **première moitié** des intervalles
+ * « conso réelle » vs moyenne de la **seconde moitié** (toujours dans la fenêtre 30 j., sans segments recharge).
+ * Plus stable que comparer seulement le 1er et le dernier relevé.
+ */
 export function getTendanceConsoEvolutionPct30j(releves: Releve[]): number | null {
   const consos = getConsommationsEntreReleves(releves);
   if (consos.length < 2) return null;
   const now = Date.now();
   const limit30 = now - 30 * MS_PAR_JOUR;
   const in30 = consos.filter((c) => new Date(c.dateFin).getTime() >= limit30);
-  if (in30.length < 2) return null;
-  const tauxDebut = in30[0].tauxJournalier;
-  const tauxFin = in30[in30.length - 1].tauxJournalier;
-  if (tauxDebut <= 0) return null;
-  const evolution = ((tauxFin - tauxDebut) / tauxDebut) * 100;
+  const consoReelle = in30.filter((c) => c.kwhConsommes > 0 && c.tauxJournalier > 0);
+  if (consoReelle.length < 2) return null;
+  const n = consoReelle.length;
+  const milieu = Math.floor(n / 2);
+  if (milieu < 1 || n - milieu < 1) return null;
+  const premiere = consoReelle.slice(0, milieu);
+  const seconde = consoReelle.slice(milieu);
+  const moyDebut =
+    premiere.reduce((s, c) => s + c.tauxJournalier, 0) / premiere.length;
+  const moyFin = seconde.reduce((s, c) => s + c.tauxJournalier, 0) / seconde.length;
+  if (moyDebut < MIN_TAUX_KWH_JOUR_TENDANCE) return null;
+  const evolution = ((moyFin - moyDebut) / moyDebut) * 100;
+  if (!Number.isFinite(evolution) || Math.abs(evolution) > MAX_EVOLUTION_PCT_TENDANCE) {
+    return null;
+  }
   return Math.round(evolution * 10) / 10;
 }
 
@@ -226,7 +259,7 @@ export function getResumeHebdoEtMensuel(
       const overlapEnd = fin;
       if (overlapEnd > overlapStart) {
         const pct = (overlapEnd - overlapStart) / (fin - debut);
-        kwhSemaine += c.kwhConsommes * pct;
+        kwhSemaine += kwhConsommationUtile(c.kwhConsommes) * pct;
       }
     }
     if (fin >= debutMois) {
@@ -235,7 +268,7 @@ export function getResumeHebdoEtMensuel(
       const overlapEnd = fin;
       if (overlapEnd > overlapStart) {
         const pct = (overlapEnd - overlapStart) / (fin - debut);
-        kwhMois += c.kwhConsommes * pct;
+        kwhMois += kwhConsommationUtile(c.kwhConsommes) * pct;
       }
     }
   }
@@ -356,9 +389,9 @@ export function getAnomalieConsommation(releves: Releve[]): AnomalieConso | null
   const recent7 = consos.filter((c) => new Date(c.dateFin).getTime() >= limit7);
   const recent30 = consos.filter((c) => new Date(c.dateFin).getTime() >= limit30);
   if (recent7.length === 0 || recent30.length === 0) return null;
-  const totalKwh7 = recent7.reduce((s, c) => s + c.kwhConsommes, 0);
+  const totalKwh7 = recent7.reduce((s, c) => s + kwhConsommationUtile(c.kwhConsommes), 0);
   const totalJours7 = recent7.reduce((s, c) => s + c.nbJours, 0);
-  const totalKwh30 = recent30.reduce((s, c) => s + c.kwhConsommes, 0);
+  const totalKwh30 = recent30.reduce((s, c) => s + kwhConsommationUtile(c.kwhConsommes), 0);
   const totalJours30 = recent30.reduce((s, c) => s + c.nbJours, 0);
   const tauxSemaine = totalJours7 > 0 ? totalKwh7 / totalJours7 : 0;
   const tauxMoyen = totalJours30 > 0 ? totalKwh30 / totalJours30 : 0;

@@ -14,10 +14,19 @@ export interface ConsoEntreReleves {
   tauxJournalier: number;
 }
 
+function dateStrToLocalEndOfDayMs(date: string): number {
+  if (date.includes('T')) return new Date(date).getTime();
+  const [y, m, d] = date.split('-').map((v) => Number(v));
+  // On suppose `YYYY-MM-DD` et on interprète en heure locale "midi" (12:00) :
+  // ça évite les décalages UTC qui cassent le tri.
+  const dt = new Date(y, (m ?? 1) - 1, d ?? 1, 12, 0, 0, 0);
+  return dt.getTime();
+}
+
 export function getRelevesTries(releves: Releve[]): Releve[] {
   return [...releves].sort((a, b) => {
-    const da = new Date(a.date).getTime();
-    const db = new Date(b.date).getTime();
+    const da = dateStrToLocalEndOfDayMs(a.date);
+    const db = dateStrToLocalEndOfDayMs(b.date);
     if (da !== db) return da - db;
     return a.id.localeCompare(b.id);
   });
@@ -40,9 +49,9 @@ export function getConsommationsEntreReleves(releves: Releve[]): ConsoEntreRelev
     const prev = tries[i - 1];
     const curr = tries[i];
     const kwhConsommes = prev.creditRestantKwh - curr.creditRestantKwh;
-    const dateDebut = new Date(prev.date);
-    const dateFin = new Date(curr.date);
-    const deltaMs = dateFin.getTime() - dateDebut.getTime();
+    const dateDebutMs = dateStrToLocalEndOfDayMs(prev.date);
+    const dateFinMs = dateStrToLocalEndOfDayMs(curr.date);
+    const deltaMs = dateFinMs - dateDebutMs;
     const nbJours = Math.max(NB_JOURS_MIN, deltaMs / MS_PAR_JOUR);
     const tauxJournalier = kwhConsommes / nbJours;
     result.push({
@@ -59,13 +68,34 @@ export function getConsommationsEntreReleves(releves: Releve[]): ConsoEntreRelev
 }
 
 /**
+ * Achats enregistrés entre deux relevés (date après le 1er relevé, au plus tard au 2e).
+ * Sert à comparer le crédit déclaré sur l’achat avec la hausse réelle lue au compteur.
+ */
+export function findAchatsDansIntervalleReleves(
+  achats: Achat[],
+  dateDebutReleve: string,
+  dateFinReleve: string
+): Achat[] {
+  const tStart = new Date(dateDebutReleve).getTime();
+  const tEnd = new Date(dateFinReleve).getTime();
+  const lo = Math.min(tStart, tEnd);
+  const hi = Math.max(tStart, tEnd);
+  return [...achats]
+    .filter((a) => {
+      const t = new Date(a.date).getTime();
+      return t > lo && t <= hi;
+    })
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+}
+
+/**
  * Étendue de l'historique en jours (du premier au dernier relevé).
  */
 export function getSpanHistoriqueJours(releves: Releve[]): number {
   const tries = getRelevesTries(releves);
   if (tries.length < 2) return 0;
-  const first = new Date(tries[0].date).getTime();
-  const last = new Date(tries[tries.length - 1].date).getTime();
+  const first = dateStrToLocalEndOfDayMs(tries[0].date);
+  const last = dateStrToLocalEndOfDayMs(tries[tries.length - 1].date);
   return (last - first) / MS_PAR_JOUR;
 }
 
@@ -75,7 +105,7 @@ export function getSpanHistoriqueJours(releves: Releve[]): number {
  */
 function getConsommationsFiablesPourPrevision(releves: Releve[]): ConsoEntreReleves[] {
   return getConsommationsEntreReleves(releves).filter(
-    (c) => c.nbJours >= MIN_INTERVAL_JOURS_PREVISION
+    (c) => c.nbJours >= MIN_INTERVAL_JOURS_PREVISION && c.kwhConsommes >= 0 && c.tauxJournalier >= 0
   );
 }
 
@@ -86,11 +116,11 @@ export function getPrixMoyenArPerKwh(achats: Achat[]): number | null {
 }
 
 export function getTauxJournalierRecent(releves: Releve[], nbJours = 7): number | null {
-  const consos = getConsommationsEntreReleves(releves);
+  const consos = getConsommationsEntreReleves(releves).filter((c) => c.kwhConsommes >= 0 && c.tauxJournalier >= 0);
   if (consos.length === 0) return null;
   const now = Date.now();
   const limit = now - nbJours * 24 * 60 * 60 * 1000;
-  const recent = consos.filter((c) => new Date(c.dateFin).getTime() >= limit);
+  const recent = consos.filter((c) => dateStrToLocalEndOfDayMs(c.dateFin) >= limit);
   if (recent.length === 0) return consos[consos.length - 1].tauxJournalier;
   const totalKwh = recent.reduce((s, c) => s + c.kwhConsommes, 0);
   const totalJours = recent.reduce((s, c) => s + c.nbJours, 0);
@@ -105,7 +135,7 @@ function getTauxSurPeriode(consos: ConsoEntreReleves[], nbJours: number): number
   if (consos.length === 0) return null;
   const now = Date.now();
   const limit = now - nbJours * MS_PAR_JOUR;
-  const period = consos.filter((c) => new Date(c.dateFin).getTime() >= limit);
+  const period = consos.filter((c) => dateStrToLocalEndOfDayMs(c.dateFin) >= limit);
   if (period.length === 0) return null;
   const totalKwh = period.reduce((s, c) => s + c.kwhConsommes, 0);
   const totalJours = period.reduce((s, c) => s + c.nbJours, 0);
@@ -133,7 +163,8 @@ function getTauxJournalierPondereFromConsos(consos: ConsoEntreReleves[]): number
  * Repli sur les périodes disponibles si pas assez de données.
  */
 export function getTauxJournalierPondere(releves: Releve[]): number | null {
-  const consos = getConsommationsEntreReleves(releves);
+  // On ne veut pas que les achats/recharges (qui augmentent le solde) soient interprétés comme de la consommation.
+  const consos = getConsommationsEntreReleves(releves).filter((c) => c.kwhConsommes >= 0 && c.tauxJournalier >= 0);
   return getTauxJournalierPondereFromConsos(consos);
 }
 
@@ -142,14 +173,14 @@ function getTendanceConsoFromConsos(
   firstDateReleves: string
 ): number {
   if (consos.length < 2) return 0;
-  const firstTime = new Date(firstDateReleves).getTime();
+  const firstTime = dateStrToLocalEndOfDayMs(firstDateReleves);
   let sumX = 0;
   let sumY = 0;
   let sumXY = 0;
   let sumX2 = 0;
   const n = consos.length;
   for (let i = 0; i < n; i++) {
-    const x = (new Date(consos[i].dateFin).getTime() - firstTime) / MS_PAR_JOUR;
+    const x = (dateStrToLocalEndOfDayMs(consos[i].dateFin) - firstTime) / MS_PAR_JOUR;
     const y = consos[i].tauxJournalier;
     sumX += x;
     sumY += y;
@@ -166,7 +197,8 @@ function getTendanceConsoFromConsos(
  * Retourne la pente (kWh/j par jour) ou 0 si pas assez de points.
  */
 export function getTendanceConso(releves: Releve[]): number {
-  const consos = getConsommationsEntreReleves(releves);
+  // Filtre les intervalles qui correspondent à une recharge (solde qui augmente).
+  const consos = getConsommationsEntreReleves(releves).filter((c) => c.kwhConsommes >= 0 && c.tauxJournalier >= 0);
   const tries = getRelevesTries(releves);
   return getTendanceConsoFromConsos(consos, tries[0]?.date ?? '');
 }
@@ -369,10 +401,11 @@ export function getDonneesPrevisionAvecIntervalleFromTaux(
  * (plusieurs intervalles entre relevés le même jour sont additionnés).
  */
 export function getDonneesGraphiqueConso(releves: Releve[]): { label: string; conso: number; dateIso: string }[] {
-  const consos = getConsommationsEntreReleves(releves);
+  const consos = getConsommationsEntreReleves(releves).filter((c) => c.kwhConsommes >= 0 && c.tauxJournalier >= 0);
   const parJour = new Map<string, number>();
   for (const c of consos) {
-    const jour = new Date(c.dateFin).toISOString().slice(0, 10);
+    const d = new Date(dateStrToLocalEndOfDayMs(c.dateFin));
+    const jour = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     parJour.set(jour, (parJour.get(jour) ?? 0) + c.kwhConsommes);
   }
   return [...parJour.entries()]

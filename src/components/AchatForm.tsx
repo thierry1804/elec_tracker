@@ -13,27 +13,48 @@ interface AchatFormProps {
 
 interface FieldErrors {
   date?: string;
+  time?: string;
   montantAr?: string;
   creditKwh?: string;
 }
 
+function toTimeString(d: Date) {
+  return d.toTimeString().slice(0, 5);
+}
+
 function getInitialState(achat?: Achat | null) {
   if (achat) {
-    const dateIso = achat.date.includes('T') ? achat.date.slice(0, 10) : achat.date;
+    let dateIso: string;
+    let timeStr: string;
+    if (achat.date.includes('T')) {
+      const d = new Date(achat.date);
+      dateIso = d.toISOString().slice(0, 10);
+      timeStr = toTimeString(d);
+    } else {
+      dateIso = achat.date;
+      timeStr = '12:00';
+    }
     return {
       dateIso,
+      timeStr,
       montantAr: String(achat.montantAr),
       creditKwh: String(achat.creditKwh),
     };
   }
-  const todayIso = new Date().toISOString().slice(0, 10);
-  return { dateIso: todayIso, montantAr: '', creditKwh: '' };
+  const now = new Date();
+  return {
+    dateIso: now.toISOString().slice(0, 10),
+    timeStr: toTimeString(now),
+    montantAr: '',
+    creditKwh: '',
+  };
 }
 
 export default function AchatForm({ onClose, achat }: AchatFormProps) {
   const { addAchat, updateAchat } = useApp();
   const isEdit = !!achat;
   const [dateIso, setDateIso] = useState('');
+  const [timeStr, setTimeStr] = useState('');
   const [montantAr, setMontantAr] = useState('');
   const [creditKwh, setCreditKwh] = useState('');
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -42,6 +63,7 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
   useEffect(() => {
     const init = getInitialState(achat);
     setDateIso(init.dateIso);
+    setTimeStr(init.timeStr);
     setMontantAr(init.montantAr);
     setCreditKwh(init.creditKwh);
   }, [achat?.id]);
@@ -51,6 +73,7 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
     setErrors({});
     const nextErrors: FieldErrors = {};
     if (!dateIso || !dateIso.trim()) nextErrors.date = "La date est requise.";
+    if (!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr)) nextErrors.time = "L'heure est requise.";
     const montant = parseFloat(montantAr.replace(/\s/g, '').replace(',', '.'));
     if (montantAr.trim() === '') nextErrors.montantAr = 'Le montant est requis.';
     else if (!Number.isFinite(montant)) nextErrors.montantAr = 'Saisissez un nombre.';
@@ -63,11 +86,17 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
       setErrors(nextErrors);
       return;
     }
+
+    const [h, m] = timeStr.split(':').map(Number);
+    const dateHeure = new Date(dateIso + 'T00:00:00');
+    dateHeure.setHours(h, m, 0, 0);
+    const dateIsoAvecHeure = dateHeure.toISOString();
+
     if (achat) {
-      updateAchat(achat.id, { date: dateIso, montantAr: montant, creditKwh: kwh });
+      updateAchat(achat.id, { date: dateIsoAvecHeure, montantAr: montant, creditKwh: kwh });
       onClose();
     } else {
-      addAchat(dateIso, montant, kwh);
+      addAchat(dateIsoAvecHeure, montant, kwh);
       onClose();
     }
   };
@@ -112,6 +141,23 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
             {errors.date && (
               <p id="achat-date-error" className="field-error" role="alert">
                 {errors.date}
+              </p>
+            )}
+          </div>
+          <div>
+            <label htmlFor="achat-time">Heure de l'achat</label>
+            <input
+              id="achat-time"
+              type="time"
+              value={timeStr}
+              onChange={(e) => setTimeStr(e.target.value)}
+              className={`input-time ${errors.time ? 'input-invalid' : ''}`}
+              aria-invalid={!!errors.time}
+              aria-describedby={errors.time ? 'achat-time-error' : undefined}
+            />
+            {errors.time && (
+              <p id="achat-time-error" className="field-error" role="alert">
+                {errors.time}
               </p>
             )}
           </div>

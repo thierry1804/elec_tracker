@@ -24,17 +24,46 @@ function formatDate(d: Date): string {
   });
 }
 
-function EvolutionBadge({ pct }: { pct: number }) {
-  const up = pct > 0;
-  const down = pct < 0;
-  const label = up ? `+${pct} %` : `${pct} %`;
+/** Évite les pourcentages illisibles quand le dénominateur est quasi nul. */
+function formatEvolutionPct(pct: number): { affichage: string; titreExact?: string } {
+  const cap = 400;
+  const arrondi = Math.round(pct * 10) / 10;
+  const avecVirgule = String(arrondi).replace('.', ',');
+  const signe = arrondi > 0 ? '+' : '';
+  const exact = `${signe}${avecVirgule} %`;
+  if (Math.abs(arrondi) > cap) {
+    const bref = arrondi > 0 ? `+>${cap} %` : `< −${cap} %`;
+    return { affichage: bref, titreExact: exact };
+  }
+  return { affichage: exact };
+}
+
+function EvolutionDelta({ pct }: { pct: number }) {
+  const { affichage, titreExact } = formatEvolutionPct(pct);
+  const dir = pct > 0 ? 'up' : pct < 0 ? 'down' : 'flat';
   return (
     <span
-      className={`analytics-evolution ${up ? 'evolution-up' : down ? 'evolution-down' : 'evolution-neutral'}`}
-      aria-label={up ? 'Hausse' : down ? 'Baisse' : 'Stable'}
+      className={`analytics-delta analytics-delta--${dir}`}
+      title={titreExact}
+      aria-label={titreExact ? `${affichage}, valeur détaillée : ${titreExact}` : affichage}
     >
-      {label}
+      {affichage}
     </span>
+  );
+}
+
+/** Au-delà, un % brut sur le taux journalier prête à confusion ; on préfère un libellé clair. */
+const SEUIL_AFFICHAGE_PCT_TENDANCE = 35;
+
+function StatPair({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
+    <div className="analytics-stat-pair">
+      <dt className="analytics-stat-pair-label">{label}</dt>
+      <dd className="analytics-stat-pair-body">
+        <span className="analytics-stat-pair-value">{value}</span>
+        <span className="analytics-stat-pair-sub">{sub}</span>
+      </dd>
+    </div>
   );
 }
 
@@ -55,124 +84,177 @@ export default function DashboardAnalytics({ data }: DashboardAnalyticsProps) {
 
   if (!hasData) return null;
 
-  return (
-    <div className="dashboard-analytics">
-      <h3 className="analytics-title">Statistiques et tendances</h3>
+  const kwhSem = `${resume.semaine.kwh} kWh`;
+  const kwhMois = `${resume.mois.kwh} kWh`;
+  const coutSem = fmt(resume.semaine.coutAr);
+  const coutMois = fmt(resume.mois.coutAr);
 
-      {/* Résumé hebdo / mensuel */}
-      <div className="analytics-block analytics-resume">
-        <div className="analytics-resume-item">
-          <span className="analytics-resume-label">Cette semaine</span>
-          <span className="analytics-resume-value">
-            {resume.semaine.kwh} kWh · {fmt(resume.semaine.coutAr)}
-          </span>
+  const showComparaison =
+    comparaison &&
+    (comparaison.kwhCeMois > 0 ||
+      comparaison.kwhMoisDernier > 0 ||
+      comparaison.coutCeMois > 0 ||
+      comparaison.coutMoisDernier > 0);
+
+  const showPrix =
+    prixComparaison && (prixComparaison.prixCeMois != null || prixComparaison.prixMoisDernier != null);
+
+  return (
+    <section className="dashboard-analytics" aria-labelledby="analytics-heading">
+      <h3 id="analytics-heading" className="analytics-title">
+        Statistiques et tendances
+      </h3>
+
+      <div className="analytics-overview">
+        <div className="analytics-overview-card">
+          <p className="analytics-overview-heading">7 derniers jours</p>
+          <dl className="analytics-stat-list">
+            <StatPair label="Consommation" value={kwhSem} sub={`Recharges : ${coutSem}`} />
+          </dl>
         </div>
-        <div className="analytics-resume-item">
-          <span className="analytics-resume-label">Ce mois</span>
-          <span className="analytics-resume-value">
-            {resume.mois.kwh} kWh · {fmt(resume.mois.coutAr)}
-          </span>
+        <div className="analytics-overview-card">
+          <p className="analytics-overview-heading">Mois en cours</p>
+          <dl className="analytics-stat-list">
+            <StatPair label="Consommation" value={kwhMois} sub={`Recharges : ${coutMois}`} />
+          </dl>
         </div>
       </div>
 
-      {/* Comparaison ce mois vs mois dernier */}
-      {comparaison && (comparaison.kwhCeMois > 0 || comparaison.kwhMoisDernier > 0 || comparaison.coutCeMois > 0 || comparaison.coutMoisDernier > 0) && (
-        <div className="analytics-block">
-          <div className="analytics-block-label">Ce mois vs mois dernier</div>
-          <div className="analytics-comparison">
-            <div className="analytics-comparison-row">
-              <span>kWh : {comparaison.kwhCeMois} vs {comparaison.kwhMoisDernier}</span>
-              {comparaison.evolutionKwhPct != null && (
-                <EvolutionBadge pct={comparaison.evolutionKwhPct} />
-              )}
-            </div>
-            <div className="analytics-comparison-row">
-              <span>Coût : {fmt(comparaison.coutCeMois)} vs {fmt(comparaison.coutMoisDernier)}</span>
-              {comparaison.evolutionCoutPct != null && (
-                <EvolutionBadge pct={comparaison.evolutionCoutPct} />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Prix moyen ce mois vs mois dernier */}
-      {prixComparaison && (prixComparaison.prixCeMois != null || prixComparaison.prixMoisDernier != null) && (
-        <div className="analytics-block">
-          <div className="analytics-block-label">Prix moyen</div>
-          <div className="analytics-comparison">
-            <span>
-              Ce mois : {prixComparaison.prixCeMois != null ? prixComparaison.prixCeMois.toFixed(2).replace('.', ',') : '—'} Ar/kWh
-              {prixComparaison.prixMoisDernier != null && (
-                <> · Mois dernier : {prixComparaison.prixMoisDernier.toFixed(2).replace('.', ',')} Ar/kWh</>
-              )}
-            </span>
-            {prixComparaison.evolutionPct != null && (
-              <EvolutionBadge pct={prixComparaison.evolutionPct} />
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Tendance consommation */}
-      {tendance.evolutionPct != null && (
-        <div className="analytics-block">
-          <div className="analytics-block-label">Tendance consommation (30 j)</div>
-          <div className="analytics-tendance">
-            <span>
-              {tendance.indicateur === 'baisse' && 'Votre conso. baisse'}
-              {tendance.indicateur === 'stable' && 'Votre conso. reste stable'}
-              {tendance.indicateur === 'hausse' && 'Votre conso. augmente'}
-            </span>
-            <EvolutionBadge pct={tendance.evolutionPct} />
-          </div>
-        </div>
-      )}
-
-      {/* Lot 2 : Prévision annuelle */}
-      {previsionAnnuelle && (
-        <div className="analytics-block">
-          <div className="analytics-block-label">Prévision annuelle</div>
-          <div className="analytics-value">
-            Environ {fmt(previsionAnnuelle.coutAnnuelEstime)}
-            <span className="analytics-sub">
-              {' '}(fourchette {fmt(previsionAnnuelle.coutMin)} – {fmt(previsionAnnuelle.coutMax)})
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Lot 2 : Objectif économie -10 % */}
-      {economie != null && economie > 0 && (
-        <div className="analytics-block">
-          <div className="analytics-block-label">Objectif économie</div>
-          <div className="analytics-value">
-            Si vous réduisez de 10 % votre conso., vous économiserez environ {fmt(economie)}/mois.
-          </div>
-        </div>
-      )}
-
-      {/* Lot 2 : Recharge typique */}
-      {rechargeTypique && (
-        <div className="analytics-block">
-          <div className="analytics-block-label">Recharge (habitude)</div>
-          <div className="analytics-value">
-            En moyenne vous rechargez tous les {rechargeTypique.intervalleMoyenJours} jours.
-            {rechargeTypique.prochaineRechargeHabitude && (
-              <span className="analytics-sub">
-                {' '}Prochaine recharge suggérée (habitude) : {formatDate(rechargeTypique.prochaineRechargeHabitude)}.
+      {showComparaison && comparaison && (
+        <div className="analytics-section">
+          <h4 className="analytics-section-title">Ce mois par rapport au mois précédent</h4>
+          <ul className="analytics-metric-rows">
+            <li className="analytics-metric-row">
+              <span className="analytics-metric-name">kWh</span>
+              <span className="analytics-metric-vals">
+                {comparaison.kwhCeMois} <span className="analytics-metric-vs">vs</span>{' '}
+                {comparaison.kwhMoisDernier}
               </span>
+              {comparaison.evolutionKwhPct != null && (
+                <EvolutionDelta pct={comparaison.evolutionKwhPct} />
+              )}
+            </li>
+            <li className="analytics-metric-row">
+              <span className="analytics-metric-name">Coût recharges</span>
+              <span className="analytics-metric-vals">
+                {fmt(comparaison.coutCeMois)} <span className="analytics-metric-vs">vs</span>{' '}
+                {fmt(comparaison.coutMoisDernier)}
+              </span>
+              {comparaison.evolutionCoutPct != null && (
+                <EvolutionDelta pct={comparaison.evolutionCoutPct} />
+              )}
+            </li>
+          </ul>
+        </div>
+      )}
+
+      {showPrix && prixComparaison && (
+        <div className="analytics-section">
+          <h4 className="analytics-section-title">Prix moyen au kWh</h4>
+          <p className="analytics-inline-detail">
+            Ce mois :{' '}
+            {prixComparaison.prixCeMois != null
+              ? `${prixComparaison.prixCeMois.toFixed(2).replace('.', ',')} Ar/kWh`
+              : '—'}
+            {prixComparaison.prixMoisDernier != null && (
+              <>
+                {' '}
+                · Mois précédent :{' '}
+                {prixComparaison.prixMoisDernier.toFixed(2).replace('.', ',')} Ar/kWh
+              </>
             )}
-          </div>
+            {prixComparaison.evolutionPct != null && (
+              <>
+                {' '}
+                <EvolutionDelta pct={prixComparaison.evolutionPct} />
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
+      {tendance.evolutionPct != null && (
+        <div className="analytics-section">
+          <h4 className="analytics-section-title">Tendance sur 30 jours</h4>
+          <p className="analytics-trend-lead">
+            {tendance.indicateur === 'baisse' && 'Votre rythme de consommation diminue.'}
+            {tendance.indicateur === 'stable' && 'Votre rythme de consommation est stable.'}
+            {tendance.indicateur === 'hausse' && 'Votre rythme de consommation augmente.'}
+          </p>
+          <p
+            className="analytics-trend-meta"
+            title={
+              Math.abs(tendance.evolutionPct) > SEUIL_AFFICHAGE_PCT_TENDANCE
+                ? `Comparaison des moyennes de kWh/j (1ʳᵉ moitié vs 2ᵉ moitié des intervalles sur 30 j.) : ${String(tendance.evolutionPct).replace('.', ',')} %`
+                : undefined
+            }
+          >
+            {Math.abs(tendance.evolutionPct) <= SEUIL_AFFICHAGE_PCT_TENDANCE ? (
+              <>
+                Variation moyenne du rythme (kWh/j) :{' '}
+                <EvolutionDelta pct={tendance.evolutionPct} />
+              </>
+            ) : tendance.evolutionPct < 0 ? (
+              <>
+                En comparant le début et la fin de la période, le rythme moyen est{' '}
+                <strong className="analytics-em">nettement plus bas</strong> qu’au début des 30 derniers
+                jours.
+              </>
+            ) : (
+              <>
+                En comparant le début et la fin de la période, le rythme moyen est{' '}
+                <strong className="analytics-em">nettement plus haut</strong> qu’au début des 30 derniers
+                jours.
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
+      {previsionAnnuelle && (
+        <div className="analytics-section">
+          <h4 className="analytics-section-title">Projection sur un an</h4>
+          <p className="analytics-projection-main">{fmt(previsionAnnuelle.coutAnnuelEstime)}</p>
+          <p className="analytics-projection-range">
+            Fourchette indicative : {fmt(previsionAnnuelle.coutMin)} – {fmt(previsionAnnuelle.coutMax)}
+          </p>
+        </div>
+      )}
+
+      {economie != null && economie > 0 && (
+        <div className="analytics-section">
+          <h4 className="analytics-section-title">Si vous réduisez de 10 %</h4>
+          <p className="analytics-value">
+            Économie d’environ <strong className="analytics-em">{fmt(economie)}</strong> par mois sur les
+            recharges, à prix moyen actuel.
+          </p>
+        </div>
+      )}
+
+      {rechargeTypique && (
+        <div className="analytics-section">
+          <h4 className="analytics-section-title">Fréquence des recharges</h4>
+          <p className="analytics-value">
+            En moyenne, une recharge tous les{' '}
+            <strong className="analytics-em">{rechargeTypique.intervalleMoyenJours}</strong> jours.
+          </p>
+          {rechargeTypique.prochaineRechargeHabitude && (
+            <p className="analytics-sub analytics-sub-block">
+              Suggestion basée sur l’habitude :{' '}
+              <time dateTime={rechargeTypique.prochaineRechargeHabitude.toISOString()}>
+                {formatDate(rechargeTypique.prochaineRechargeHabitude)}
+              </time>
+            </p>
+          )}
         </div>
       )}
 
       {saisonnalite?.message && (
-        <div className="analytics-block">
-          <div className="analytics-block-label">Saisonnalité</div>
-          <div className="analytics-value">{saisonnalite.message}</div>
+        <div className="analytics-section">
+          <h4 className="analytics-section-title">Saisonnalité</h4>
+          <p className="analytics-value">{saisonnalite.message}</p>
         </div>
       )}
-    </div>
+    </section>
   );
 }

@@ -34,6 +34,40 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
   const creditRestant = dernierReleve?.creditRestantKwh ?? 0;
   const dateDernierReleve = dernierReleve?.date;
 
+  const normalizeDateStrToMsNoon = (value: string): number => {
+    if (value.includes('T')) return new Date(value).getTime();
+    const [y, m, d] = value.split('-').map((v) => Number(v));
+    const dt = new Date(y, (m ?? 1) - 1, d ?? 1, 12, 0, 0, 0);
+    return dt.getTime();
+  };
+
+  const isEmpty = releves.length === 0;
+
+  const achatDebug =
+    !isEmpty && achats.length > 0 && tries.length > 0
+      ? (() => {
+          const achatsTries = [...achats].sort(
+            (a, b) => normalizeDateStrToMsNoon(a.date) - normalizeDateStrToMsNoon(b.date)
+          );
+          const lastAchat = achatsTries[achatsTries.length - 1];
+          const achatTimeMs = normalizeDateStrToMsNoon(lastAchat.date);
+          const baseReleve = [...tries]
+            .reverse()
+            .find((r) => normalizeDateStrToMsNoon(r.date) < achatTimeMs) ?? null;
+          const creditAttendu = (baseReleve?.creditRestantKwh ?? 0) + lastAchat.creditKwh;
+          const diff = Math.abs(creditAttendu - creditRestant);
+          if (diff > 0.05) {
+            return {
+              lastAchat,
+              baseReleve,
+              creditAttendu,
+              diff,
+            };
+          }
+          return null;
+        })()
+      : null;
+
   const maxCredit = Math.max(
     MAX_CREDIT_GAUGE,
     ...tries.map((r) => r.creditRestantKwh),
@@ -73,7 +107,6 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
       ? Math.round((kwhMoisEstime - objectifKwh) * 10) / 10
       : null;
 
-  const isEmpty = releves.length === 0;
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString('fr-FR', {
       day: '2-digit',
@@ -104,6 +137,13 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
                   <>Prochaine recharge suggérée dans <span>{joursRestants} jour{joursRestants !== 1 ? 's' : ''}</span></>
                 ) : (
                   <>Solde au {dateDernierReleve && formatDate(dateDernierReleve)}</>
+                )}
+                {achatDebug && (
+                  <div style={{ marginTop: 6, fontSize: 12, color: 'var(--muted)' }}>
+                    Dernier achat: +{achatDebug.lastAchat.creditKwh.toFixed(2)} kWh · base:{' '}
+                    {achatDebug.baseReleve ? `${achatDebug.baseReleve.creditRestantKwh.toFixed(2)} kWh` : '—'} ·
+                    attendu: {achatDebug.creditAttendu.toFixed(2)} kWh · actuel: {creditRestant.toFixed(2)} kWh
+                  </div>
                 )}
               </div>
             )}

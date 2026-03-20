@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { getRelevesTries, getConsommationsEntreReleves } from '../lib/calculs';
+import {
+  getRelevesTries,
+  getConsommationsEntreReleves,
+  findAchatsDansIntervalleReleves,
+} from '../lib/calculs';
+import type { ConsoEntreReleves } from '../lib/calculs';
 import ReleveForm from '../components/ReleveForm';
 
 const IconEdit = () => (
@@ -42,6 +47,60 @@ export default function Historique() {
       ? `${(nbJours * 24).toFixed(1).replace('.', ',')} h`
       : `${Number.isInteger(nbJours) ? nbJours : nbJours.toFixed(1).replace('.', ',')} j`;
 
+  const muted = { color: 'var(--muted)', fontSize: '0.92em' } as const;
+
+  /** Hausse de solde : l’app affiche la différence entre deux lectures, pas le kWh saisi dans « Achat ». */
+  function ligneRechargement(conso: ConsoEntreReleves) {
+    const deltaReleves = Math.abs(conso.kwhConsommes);
+    const dStr = deltaReleves.toFixed(2).replace('.', ',');
+    const sur = formatDuree(conso.nbJours);
+    const achatsI = findAchatsDansIntervalleReleves(
+      data.achats,
+      conso.dateDebut,
+      conso.dateFin
+    );
+    const sommeAchats = achatsI.reduce((s, a) => s + a.creditKwh, 0);
+    const ecart = Math.round((deltaReleves - sommeAchats) * 100) / 100;
+
+    if (achatsI.length === 0) {
+      const ap = String(conso.kwhApres).replace('.', ',');
+      const av = String(conso.kwhAvant).replace('.', ',');
+      return (
+        <>
+          Hausse du solde +{dStr} kWh{' '}
+          <span style={muted}>
+            ({ap} − {av} : écart entre les deux lectures, distinct du montant éventuel sur la fiche achat)
+          </span>{' '}
+          <span style={{ whiteSpace: 'nowrap' }}>({sur})</span>
+        </>
+      );
+    }
+
+    const lblAchat =
+      achatsI.length === 1
+        ? `${sommeAchats} kWh (achat)`
+        : `${sommeAchats} kWh (${achatsI.length} achats)`;
+
+    if (Math.abs(ecart) < 0.06) {
+      return (
+        <>
+          Rechargement +{dStr} kWh ({sur}) <span style={muted}>— cohérent avec {lblAchat}</span>
+        </>
+      );
+    }
+
+    return (
+      <>
+        Hausse compteur +{dStr} kWh ({sur}) · <span style={muted}>achat enregistré {lblAchat}</span>
+        <span style={muted}>
+          {' '}
+          — écart relevés − achat : {ecart > 0 ? '+' : ''}
+          {ecart.toFixed(2).replace('.', ',')} kWh
+        </span>
+      </>
+    );
+  }
+
   if (tries.length === 0) {
     return (
       <div className="page-empty">
@@ -73,7 +132,9 @@ export default function Historique() {
                   <td>{releve.creditRestantKwh}</td>
                   <td>
                     {conso != null
-                      ? `${conso.kwhConsommes.toFixed(2)} (sur ${formatDuree(conso.nbJours)})`
+                      ? conso.kwhConsommes >= 0
+                        ? `${conso.kwhConsommes.toFixed(2)} (sur ${formatDuree(conso.nbJours)})`
+                        : ligneRechargement(conso)
                       : '—'}
                   </td>
                   <td>

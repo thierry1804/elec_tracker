@@ -10,6 +10,7 @@ import {
   getMessageAvertissementPrevision,
   getCoutMensuelEstime,
   getPrixMoyenArPerKwh,
+  getRelevesTries,
 } from '../lib/calculs';
 import { getAnomalieConsommation } from '../lib/analytics';
 import { loadSettings } from '../lib/storage';
@@ -20,9 +21,7 @@ export default function Dashboard() {
   const layoutActions = useLayoutActions();
   const prevision = usePrevision();
   const { releves, achats } = data;
-  const tries = [...releves].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+  const tries = getRelevesTries(releves);
   const dernierReleve = tries[tries.length - 1];
   const creditRestant = dernierReleve?.creditRestantKwh ?? 0;
   const { tauxJournalier, joursRestants } = prevision;

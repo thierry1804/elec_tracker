@@ -10,6 +10,8 @@ export interface Releve {
   id: string;
   date: string; // ISO
   creditRestantKwh: number;
+  /** Relevé créé automatiquement avec un achat (solde théorique). L’affichage du solde utilise le dernier relevé manuel. */
+  fromAchat?: boolean;
 }
 
 export interface AppData {

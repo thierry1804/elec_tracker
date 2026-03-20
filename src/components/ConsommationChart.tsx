@@ -23,7 +23,7 @@ export default function ConsommationChart({ releves, periodeJours }: Consommatio
   let data = getDonneesGraphiqueConso(releves);
   if (periodeJours != null && periodeJours > 0) {
     const limit = Date.now() - periodeJours * MS_PER_DAY;
-    data = data.filter((p) => new Date(p.dateIso).getTime() >= limit);
+    data = data.filter((p) => new Date(p.dateIso + 'T12:00:00').getTime() >= limit);
   }
 
   if (data.length === 0) {

@@ -27,12 +27,23 @@ export default function Achats() {
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const formatDateHeure = (d: string) => {
+    const date = new Date(d);
+    const hasTime = d.length > 10 && d.includes('T');
+    return hasTime
+      ? date.toLocaleString('fr-FR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
 
   const chartData = achats.map((a) => ({
     date: a.date,
-    label: formatDate(a.date),
+    label: formatDateHeure(a.date),
     prix: Math.round(a.prixUnitaireArPerKwh),
   }));
 
@@ -78,7 +89,7 @@ export default function Achats() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>Date</th>
+              <th>Date et heure</th>
               <th>Montant (Ar)</th>
               <th>Crédit (kWh)</th>
               <th>Prix unitaire (Ar/kWh)</th>
@@ -88,7 +99,7 @@ export default function Achats() {
           <tbody>
             {[...achats].reverse().map((a) => (
               <tr key={a.id}>
-                <td>{formatDate(a.date)}</td>
+                <td>{formatDateHeure(a.date)}</td>
                 <td>{a.montantAr.toLocaleString('fr-FR')}</td>
                 <td>{a.creditKwh}</td>
                 <td>{Math.round(a.prixUnitaireArPerKwh).toLocaleString('fr-FR')}</td>

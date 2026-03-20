@@ -50,16 +50,8 @@ const IconMoon = () => (
   </svg>
 );
 
-const IconDownload = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-    <polyline points="7 10 12 15 17 10" />
-    <line x1="12" y1="15" x2="12" y2="3" />
-  </svg>
-);
-
 const IconUpload = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
     <polyline points="17 8 12 3 7 8" />
     <line x1="12" y1="3" x2="12" y2="15" />
@@ -111,6 +103,41 @@ const IconX = () => (
 const IconCheck = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+
+/** Export sauvegarde JSON */
+const IconBraces = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M8 3H7a2 2 0 0 0-2 2v5c0 1-1 2-2 2 1 0 2 1 2 2v5a2 2 0 0 0 2 2h1" />
+    <path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1 1-2 2-2-1 0-2-1-2-2V5a2 2 0 0 0-2-2h-1" />
+  </svg>
+);
+
+const IconTable = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <line x1="3" y1="9" x2="21" y2="9" />
+    <line x1="3" y1="15" x2="21" y2="15" />
+    <line x1="9" y1="3" x2="9" y2="21" />
+    <line x1="15" y1="3" x2="15" y2="21" />
+  </svg>
+);
+
+const IconCart = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <circle cx="9" cy="21" r="1" />
+    <circle cx="20" cy="21" r="1" />
+    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+  </svg>
+);
+
+const IconFileReport = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="8" y1="13" x2="16" y2="13" />
+    <line x1="8" y1="17" x2="14" y2="17" />
   </svg>
 );
 
@@ -339,39 +366,39 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
             </h3>
             <p className="settings-hint">Choisir le thème de l'application</p>
             <div
-              className="theme-toggle theme-toggle-three"
+              className="theme-toggle theme-toggle-three theme-toggle-icons"
               role="group"
-              aria-label="Thème"
+              aria-label="Thème d’affichage"
             >
               <button
                 type="button"
-                className={`theme-toggle-option ${theme === 'light' ? 'theme-toggle-option-active' : ''}`}
+                className={`theme-toggle-option theme-toggle-option--icon ${theme === 'light' ? 'theme-toggle-option-active' : ''}`}
                 onClick={() => handleThemeChange('light')}
                 aria-pressed={theme === 'light'}
+                aria-label="Thème clair"
                 title="Clair"
               >
                 <IconSun />
-                <span>Clair</span>
               </button>
               <button
                 type="button"
-                className={`theme-toggle-option ${theme === 'system' ? 'theme-toggle-option-active' : ''}`}
+                className={`theme-toggle-option theme-toggle-option--icon ${theme === 'system' ? 'theme-toggle-option-active' : ''}`}
                 onClick={() => handleThemeChange('system')}
                 aria-pressed={theme === 'system'}
+                aria-label="Thème selon le système"
                 title="Système"
               >
                 <IconMonitor />
-                <span>Système</span>
               </button>
               <button
                 type="button"
-                className={`theme-toggle-option ${theme === 'dark' ? 'theme-toggle-option-active' : ''}`}
+                className={`theme-toggle-option theme-toggle-option--icon ${theme === 'dark' ? 'theme-toggle-option-active' : ''}`}
                 onClick={() => handleThemeChange('dark')}
                 aria-pressed={theme === 'dark'}
+                aria-label="Thème sombre"
                 title="Sombre"
               >
                 <IconMoon />
-                <span>Sombre</span>
               </button>
             </div>
           </section>
@@ -396,8 +423,10 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
               </span>
               <span className="reminder-toggle-text">Me rappeler de recharger</span>
             </label>
-            <div className="reminder-days-inline">
-              <label htmlFor="reminder-days" className="reminder-days-label">Jours avant épuisement</label>
+            <div className="reminder-days-field">
+              <label htmlFor="reminder-days" className="reminder-days-label">
+                Jours avant épuisement
+              </label>
               <input
                 id="reminder-days"
                 type="number"
@@ -524,46 +553,57 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
             <p className="settings-hint backup-last-save">
               Dernière sauvegarde : <strong>{formatLastSave(lastSave)}</strong>
             </p>
-            <div className="backup-actions">
-              <button type="button" className="btn btn-secondary backup-btn" onClick={handleExport}>
-                <IconDownload />
-                <span>Exporter (JSON)</span>
+            <div className="backup-actions backup-actions--icons" role="toolbar" aria-label="Export et import des données">
+              <button
+                type="button"
+                className="btn btn-secondary backup-btn backup-btn--icon"
+                onClick={handleExport}
+                title="Exporter la sauvegarde (JSON)"
+                aria-label="Exporter la sauvegarde JSON"
+              >
+                <IconBraces />
               </button>
               <button
                 type="button"
-                className="btn btn-secondary backup-btn"
+                className="btn btn-secondary backup-btn backup-btn--icon"
                 onClick={() => exportRelevesCSV(data.releves)}
+                title="Exporter les relevés (CSV)"
+                aria-label="Exporter les relevés en CSV"
               >
-                <IconDownload />
-                <span>Export relevés CSV</span>
+                <IconTable />
               </button>
               <button
                 type="button"
-                className="btn btn-secondary backup-btn"
+                className="btn btn-secondary backup-btn backup-btn--icon"
                 onClick={() => exportAchatsCSV(data.achats)}
+                title="Exporter les achats (CSV)"
+                aria-label="Exporter les achats en CSV"
               >
-                <IconDownload />
-                <span>Export achats CSV</span>
+                <IconCart />
               </button>
-              <label className="btn btn-secondary backup-btn backup-btn-import">
+              <label
+                className="btn btn-secondary backup-btn backup-btn--icon backup-btn-import"
+                title="Importer une sauvegarde (JSON)"
+                aria-label="Importer une sauvegarde JSON"
+              >
                 <IconUpload />
-                <span>Importer</span>
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept=".json"
                   onChange={handleImportFile}
                   style={{ display: 'none' }}
-                  aria-label="Choisir un fichier de sauvegarde"
+                  aria-label="Choisir un fichier de sauvegarde JSON"
                 />
               </label>
               <button
                 type="button"
-                className="btn btn-secondary backup-btn"
+                className="btn btn-secondary backup-btn backup-btn--icon"
                 onClick={() => downloadReportHtml(data)}
+                title="Exporter le rapport (HTML)"
+                aria-label="Exporter le rapport HTML"
               >
-                <IconDownload />
-                <span>Export rapport (HTML)</span>
+                <IconFileReport />
               </button>
             </div>
             {importError && (
