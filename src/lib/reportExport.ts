@@ -3,6 +3,15 @@ import { getRelevesTries } from './calculs';
 import { getPrixMoyenArPerKwh, getCoutMensuelEstime } from './calculs';
 import { getTauxJournalierPondere } from './calculs';
 import { loadSettings } from './storage';
+import {
+  getResumeHebdoEtMensuel,
+  getComparaisonCeMoisVsDernier,
+  getComparaisonPrixMoyenCeMoisVsDernier,
+  getTendanceConsoIndicateur,
+  getPrevisionAnnuelle,
+  getRechargeTypique,
+  getSaisonnalite,
+} from './analytics';
 
 function formatDate(d: string): string {
   return new Date(d).toLocaleDateString('fr-FR', {
@@ -14,8 +23,21 @@ function formatDate(d: string): string {
   });
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatAr(ar: number): string {
+  return Math.round(ar).toLocaleString('fr-FR') + ' Ar';
+}
+
 /**
- * Génère un rapport HTML de synthèse (solde, dernier relevé, dernier achat, conso moyenne, coût mensuel, objectif) + tableaux.
+ * Génère un rapport HTML de synthèse (solde, dernier relevé, dernier achat, conso moyenne, coût mensuel, objectif) + insights + tableaux.
  */
 export function generateReportHtml(data: AppData): string {
   const { releves, achats } = data;
@@ -51,6 +73,77 @@ export function generateReportHtml(data: AppData): string {
       ? `<p><strong>Objectif :</strong> ${settings.budgetMensuelAr != null ? `Budget ${settings.budgetMensuelAr} Ar/mois` : ''} ${settings.budgetMensuelAr != null && settings.objectifKwhMois != null ? ' · ' : ''} ${settings.objectifKwhMois != null ? `Consommation ${settings.objectifKwhMois} kWh/mois` : ''}</p>`
       : '';
 
+  // Note du mois
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const noteDuMois = settings.evenementsParMois?.[currentMonthKey];
+  const noteHtml = noteDuMois
+    ? `<p><strong>Note du mois :</strong> ${escapeHtml(noteDuMois)}</p>`
+    : '';
+
+  // Insights
+  const insightsLines: string[] = [];
+  const hasData = releves.length >= 2 || achats.length >= 1;
+
+  if (hasData) {
+    const resume = getResumeHebdoEtMensuel(releves, achats);
+    insightsLines.push(
+      `<li>7 derniers jours : ${resume.semaine.kwh} kWh consommés, recharges ${formatAr(resume.semaine.coutAr)}</li>`
+    );
+    insightsLines.push(
+      `<li>Mois en cours : ${resume.mois.kwh} kWh consommés, recharges ${formatAr(resume.mois.coutAr)}</li>`
+    );
+
+    const comparaison = getComparaisonCeMoisVsDernier(releves, achats);
+    if (comparaison) {
+      const evKwh = comparaison.evolutionKwhPct != null ? ` (${comparaison.evolutionKwhPct > 0 ? '+' : ''}${comparaison.evolutionKwhPct} %)` : '';
+      const evCout = comparaison.evolutionCoutPct != null ? ` (${comparaison.evolutionCoutPct > 0 ? '+' : ''}${comparaison.evolutionCoutPct} %)` : '';
+      insightsLines.push(
+        `<li>Ce mois vs précédent : ${comparaison.kwhCeMois} vs ${comparaison.kwhMoisDernier} kWh${evKwh}, coût ${formatAr(comparaison.coutCeMois)} vs ${formatAr(comparaison.coutMoisDernier)}${evCout}</li>`
+      );
+    }
+
+    const prixComp = getComparaisonPrixMoyenCeMoisVsDernier(achats);
+    if (prixComp && (prixComp.prixCeMois != null || prixComp.prixMoisDernier != null)) {
+      const ce = prixComp.prixCeMois != null ? `${prixComp.prixCeMois.toFixed(2)} Ar/kWh` : '—';
+      const prec = prixComp.prixMoisDernier != null ? `${prixComp.prixMoisDernier.toFixed(2)} Ar/kWh` : '—';
+      insightsLines.push(`<li>Prix moyen : ce mois ${ce}, précédent ${prec}</li>`);
+    }
+
+    const tendance = getTendanceConsoIndicateur(releves);
+    if (tendance.evolutionPct != null) {
+      const labels = { baisse: 'en baisse', stable: 'stable', hausse: 'en hausse' };
+      insightsLines.push(
+        `<li>Tendance 30 j : consommation ${labels[tendance.indicateur]} (${tendance.evolutionPct > 0 ? '+' : ''}${tendance.evolutionPct} %)</li>`
+      );
+    }
+
+    const prevision = getPrevisionAnnuelle(releves, achats);
+    if (prevision) {
+      insightsLines.push(
+        `<li>Projection annuelle : ${formatAr(prevision.coutAnnuelEstime)} (fourchette ${formatAr(prevision.coutMin)} – ${formatAr(prevision.coutMax)})</li>`
+      );
+    }
+
+    const recharge = getRechargeTypique(achats);
+    if (recharge) {
+      let line = `Fréquence recharge : ~${recharge.intervalleMoyenJours} jours`;
+      if (recharge.prochaineRechargeHabitude) {
+        line += `, prochaine suggérée le ${recharge.prochaineRechargeHabitude.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+      }
+      insightsLines.push(`<li>${line}</li>`);
+    }
+
+    const saison = getSaisonnalite(releves, achats);
+    if (saison?.message) {
+      insightsLines.push(`<li>${escapeHtml(saison.message)}</li>`);
+    }
+  }
+
+  const insightsSection = insightsLines.length > 0
+    ? `<h2>Insights</h2><ul>${insightsLines.join('')}</ul>`
+    : '';
+
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -64,6 +157,8 @@ export function generateReportHtml(data: AppData): string {
     th, td { border: 1px solid #ddd; padding: 0.4rem 0.6rem; text-align: left; }
     th { background: #f5f5f5; }
     p { margin: 0.4rem 0; }
+    ul { margin: 0.5rem 0; padding-left: 1.5rem; }
+    li { margin: 0.3rem 0; }
   </style>
 </head>
 <body>
@@ -76,6 +171,8 @@ export function generateReportHtml(data: AppData): string {
   <p><strong>Coût mensuel estimé :</strong> ${coutMensuel != null ? coutMensuel + ' Ar' : '—'}</p>
   <p><strong>kWh/mois estimé :</strong> ${kwhMoisEstime != null ? kwhMoisEstime + ' kWh' : '—'}</p>
   ${objectifLine}
+  ${noteHtml}
+  ${insightsSection}
   <h2>Derniers relevés</h2>
   <table><thead><tr><th>Date</th><th>Crédit restant (kWh)</th></tr></thead><tbody>${rowsReleves || '<tr><td colspan="2">Aucun relevé</td></tr>'}</tbody></table>
   <h2>Derniers achats</h2>

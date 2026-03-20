@@ -123,6 +123,13 @@ export function loadSettings(): AppSettings {
     if (parsed.periodeGraphiques === '7' || parsed.periodeGraphiques === '30' || parsed.periodeGraphiques === '90' || parsed.periodeGraphiques === 'tout') {
       out.periodeGraphiques = parsed.periodeGraphiques;
     }
+    if (parsed.evenementsParMois && typeof parsed.evenementsParMois === 'object' && !Array.isArray(parsed.evenementsParMois)) {
+      const obj: Record<string, string> = {};
+      for (const [k, v] of Object.entries(parsed.evenementsParMois as Record<string, unknown>)) {
+        if (typeof v === 'string') obj[k] = v;
+      }
+      if (Object.keys(obj).length > 0) out.evenementsParMois = obj;
+    }
     return out;
   } catch {
     return {};

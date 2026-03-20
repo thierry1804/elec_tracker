@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { useLayoutActions } from '../context/LayoutContext';
 import {
   LineChart,
   Line,
@@ -21,11 +22,22 @@ const IconEdit = () => (
 
 export default function Achats() {
   const { data, deleteAchat } = useApp();
+  const layoutActions = useLayoutActions();
   const [editingAchatId, setEditingAchatId] = useState<string | null>(null);
   const editingAchat = editingAchatId ? data.achats.find((a) => a.id === editingAchatId) ?? null : null;
   const achats = [...data.achats].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
+
+  const showReleveCta = useMemo(() => {
+    if (achats.length === 0) return false;
+    const dernierAchat = achats[achats.length - 1];
+    const dernierAchatTime = new Date(dernierAchat.date).getTime();
+    const releveManuelApres = data.releves.some(
+      (r) => !r.fromAchat && new Date(r.date).getTime() > dernierAchatTime
+    );
+    return !releveManuelApres;
+  }, [achats, data.releves]);
 
   const formatDateHeure = (d: string) => {
     const date = new Date(d);
@@ -62,6 +74,19 @@ export default function Achats() {
   return (
     <div className="achats">
       <h2>Historique des achats</h2>
+      {showReleveCta && (
+        <div className="alert-banner alert-info" role="status" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <span style={{ flex: 1 }}>Pour améliorer les calculs de consommation, ajoutez un relevé manuel après ce dernier achat.</span>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => layoutActions?.openReleve()}
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            + Relevé
+          </button>
+        </div>
+      )}
       {chartData.length > 0 && (
         <div className="chart-container" style={{ marginBottom: '1.5rem' }}>
           <h3>Évolution du prix (Ar/kWh)</h3>

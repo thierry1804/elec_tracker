@@ -55,6 +55,12 @@ export default function Dashboard() {
   const settingsChart = loadSettings();
   const periodeGraphiques = settingsChart.periodeGraphiques ?? '30';
 
+  const currentMonthKey = (() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  })();
+  const noteDuMois = settings.evenementsParMois?.[currentMonthKey];
+
   return (
     <div className="dashboard">
       {!hasReleves && (
@@ -95,6 +101,11 @@ export default function Dashboard() {
       {conseil && (
         <div className="alert-banner alert-info" role="status">
           {conseil}
+        </div>
+      )}
+      {noteDuMois && (
+        <div className="alert-banner alert-info" role="status">
+          <strong>Note du mois :</strong> {noteDuMois}
         </div>
       )}
       <DashboardCards data={data} />

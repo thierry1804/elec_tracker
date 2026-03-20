@@ -38,4 +38,6 @@ export interface AppSettings {
   arrondiMontant?: 'entier' | 'decimales';
   /** Période par défaut des graphiques (jours ou tout). */
   periodeGraphiques?: '7' | '30' | '90' | 'tout';
+  /** Notes persistantes par mois (clé au format YYYY-MM). */
+  evenementsParMois?: Record<string, string>;
 }

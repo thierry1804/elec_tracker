@@ -174,7 +174,12 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
   const [uniteAffichage, setUniteAffichage] = useState<'ar' | 'kar'>('ar');
   const [arrondiMontant, setArrondiMontant] = useState<'entier' | 'decimales'>('entier');
   const [periodeGraphiques, setPeriodeGraphiques] = useState<'7' | '30' | '90' | 'tout'>('30');
+  const [noteDuMois, setNoteDuMois] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const currentMonthKey = (() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  })();
 
   useEffect(() => {
     setLastSave(getLastSaveTime());
@@ -194,7 +199,8 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     setUniteAffichage(s.uniteAffichage ?? 'ar');
     setArrondiMontant(s.arrondiMontant ?? 'entier');
     setPeriodeGraphiques(s.periodeGraphiques ?? '30');
-  }, []);
+    setNoteDuMois(s.evenementsParMois?.[currentMonthKey] ?? '');
+  }, [currentMonthKey]);
 
   const handleReminderToggle = async (checked: boolean) => {
     if (checked) {
@@ -265,6 +271,21 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
     setPeriodeGraphiques(value);
     const prev = loadSettings();
     saveSettings({ ...prev, periodeGraphiques: value });
+  };
+
+  const handleNoteDuMoisChange = (value: string) => {
+    setNoteDuMois(value);
+    const prev = loadSettings();
+    const evenements = { ...(prev.evenementsParMois ?? {}) };
+    if (value.trim()) {
+      evenements[currentMonthKey] = value;
+    } else {
+      delete evenements[currentMonthKey];
+    }
+    saveSettings({
+      ...prev,
+      evenementsParMois: Object.keys(evenements).length > 0 ? evenements : undefined,
+    });
   };
 
   useEffect(() => {
@@ -488,6 +509,35 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
                 />
               </div>
             </div>
+          </section>
+
+          {/* Section Notes du mois */}
+          <section className="settings-section settings-card" aria-labelledby="notes-heading">
+            <h3 id="notes-heading" className="settings-card-title settings-card-title-with-icon">
+              <IconFileReport />
+              Notes du mois
+            </h3>
+            <p className="settings-hint settings-hint-inline">
+              Annotez le mois en cours (ex. invités, clim, panne, voyage) pour expliquer un pic de consommation.
+            </p>
+            <textarea
+              className="objective-field-input"
+              rows={3}
+              value={noteDuMois}
+              onChange={(e) => handleNoteDuMoisChange(e.target.value)}
+              placeholder="ex: Climatisation toute la semaine, invités..."
+              style={{ width: '100%', resize: 'vertical' }}
+            />
+            {noteDuMois.trim() && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => handleNoteDuMoisChange('')}
+                style={{ marginTop: '0.5rem' }}
+              >
+                Effacer la note
+              </button>
+            )}
           </section>
 
           {/* Section Affichage */}

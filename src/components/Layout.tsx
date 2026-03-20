@@ -4,6 +4,7 @@ import ReleveForm from './ReleveForm';
 import AchatForm from './AchatForm';
 import SettingsModal from './SettingsModal';
 import ReminderChecker from './ReminderChecker';
+import ReminderInAppBanner from './ReminderInAppBanner';
 import { LayoutActionsProvider } from '../context/LayoutContext';
 import { PrevisionProvider } from '../context/PrevisionContext';
 import { useApp } from '../context/AppContext';
@@ -182,6 +183,8 @@ export default function Layout() {
       </div>
 
       <div className="layout-spacer" aria-hidden="true" />
+
+      <ReminderInAppBanner />
 
       <main className="main">
         <Outlet />
