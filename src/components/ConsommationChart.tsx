@@ -5,9 +5,11 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  ReferenceLine,
   ResponsiveContainer,
 } from 'recharts';
 import { getDonneesGraphiqueConso } from '../lib/calculs';
+import { useSettings } from '../context/SettingsContext';
 import type { Releve } from '../types';
 import './Charts.css';
 
@@ -20,6 +22,8 @@ interface ConsommationChartProps {
 }
 
 export default function ConsommationChart({ releves, periodeJours }: ConsommationChartProps) {
+  const { settings } = useSettings();
+  const objectifKwhJour = settings.objectifKwhMois != null ? Math.round((settings.objectifKwhMois / 30) * 100) / 100 : null;
   let data = getDonneesGraphiqueConso(releves);
   if (periodeJours != null && periodeJours > 0) {
     const limit = Date.now() - periodeJours * MS_PER_DAY;
@@ -59,6 +63,14 @@ export default function ConsommationChart({ releves, periodeJours }: Consommatio
             formatter={(value: number) => [`${Number(value).toFixed(2)} kWh`, 'Consommation']}
           />
           <Bar dataKey="conso" fill="var(--accent-orange)" radius={[4, 4, 0, 0]} />
+          {objectifKwhJour != null && (
+            <ReferenceLine
+              y={objectifKwhJour}
+              stroke="var(--accent-red)"
+              strokeDasharray="6 3"
+              label={{ value: `Obj. ${objectifKwhJour} kWh/j`, position: 'right', fill: 'var(--accent-red)', fontSize: 10 }}
+            />
+          )}
         </BarChart>
       </ResponsiveContainer>
     </div>

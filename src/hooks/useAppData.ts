@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AppData, Achat, Releve } from '../types';
-import { loadData, saveData, generateId } from '../lib/storage';
+import { loadData, saveData, generateId, loadDataForCompteur, saveDataForCompteur, loadSettings } from '../lib/storage';
 
 function dateStrToLocalEndOfDayMs(date: string): number {
   // Si `date` inclut une heure (ISO), on prend directement le timestamp.
@@ -51,11 +51,19 @@ function ajusterInstantAchatApresRelevesMemeJour(achatMs: number, releves: Relev
 }
 
 export function useAppData() {
-  const [data, setData] = useState<AppData>(() => loadData());
+  const settings = loadSettings();
+  const compteurId = settings.compteurActifId;
+  const [data, setData] = useState<AppData>(() =>
+    compteurId ? loadDataForCompteur(compteurId) : loadData()
+  );
 
   useEffect(() => {
-    saveData(data);
-  }, [data]);
+    if (compteurId) {
+      saveDataForCompteur(compteurId, data);
+    } else {
+      saveData(data);
+    }
+  }, [data, compteurId]);
 
   const addReleve = useCallback((date: string, creditRestantKwh: number) => {
     const releve: Releve = {

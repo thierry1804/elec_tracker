@@ -1,4 +1,4 @@
-import type { AppData, AppSettings } from '../types';
+import type { AppData, AppSettings, Compteur } from '../types';
 
 const STORAGE_KEY = 'electracker_data';
 export const LAST_SAVE_KEY = 'electracker_last_save';
@@ -130,6 +130,15 @@ export function loadSettings(): AppSettings {
       }
       if (Object.keys(obj).length > 0) out.evenementsParMois = obj;
     }
+    if (Array.isArray(parsed.compteurs)) {
+      out.compteurs = (parsed.compteurs as unknown[])
+        .filter((c): c is Compteur =>
+          !!c && typeof c === 'object' && typeof (c as Compteur).id === 'string' && typeof (c as Compteur).nom === 'string'
+        );
+    }
+    if (typeof parsed.compteurActifId === 'string') {
+      out.compteurActifId = parsed.compteurActifId;
+    }
     return out;
   } catch {
     return {};
@@ -138,4 +147,37 @@ export function loadSettings(): AppSettings {
 
 export function saveSettings(settings: AppSettings): void {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+/** Clé de stockage propre à un compteur. */
+function compteurStorageKey(compteurId: string): string {
+  return `${STORAGE_KEY}_${compteurId}`;
+}
+
+function compteurLastSaveKey(compteurId: string): string {
+  return `${LAST_SAVE_KEY}_${compteurId}`;
+}
+
+/**
+ * Charge les données du compteur spécifié (ou principal si pas d'ID).
+ */
+export function loadDataForCompteur(compteurId?: string): AppData {
+  if (!compteurId) return loadData();
+  try {
+    const raw = localStorage.getItem(compteurStorageKey(compteurId));
+    if (!raw) return { achats: [], releves: [] };
+    // Réutilise la même logique de parsing (simplifié : pas de migration ici)
+    const parsed = JSON.parse(raw) as AppData;
+    return {
+      releves: Array.isArray(parsed.releves) ? parsed.releves : [],
+      achats: Array.isArray(parsed.achats) ? parsed.achats : [],
+    };
+  } catch {
+    return { achats: [], releves: [] };
+  }
+}
+
+export function saveDataForCompteur(compteurId: string, data: AppData): void {
+  localStorage.setItem(compteurStorageKey(compteurId), JSON.stringify(data));
+  localStorage.setItem(compteurLastSaveKey(compteurId), new Date().toISOString());
 }

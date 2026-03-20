@@ -1,6 +1,6 @@
 import type { AppData } from '../types';
-import { loadSettings } from '../lib/storage';
 import { formatMontant } from '../lib/format';
+import { useSettings } from '../context/SettingsContext';
 import {
   getComparaisonCeMoisVsDernier,
   getComparaisonPrixMoyenCeMoisVsDernier,
@@ -11,6 +11,7 @@ import {
   getRechargeTypique,
   getSaisonnalite,
 } from '../lib/analytics';
+import { detecterPaliersJirama } from '../lib/jirama';
 
 interface DashboardAnalyticsProps {
   data: AppData;
@@ -77,7 +78,8 @@ export default function DashboardAnalytics({ data }: DashboardAnalyticsProps) {
   const economie = getEconomieMensuelleSiReduction(releves, achats, 10);
   const rechargeTypique = getRechargeTypique(achats);
   const saisonnalite = getSaisonnalite(releves, achats);
-  const settings = loadSettings();
+  const paliersJirama = detecterPaliersJirama(achats);
+  const { settings } = useSettings();
 
   const hasData = releves.length >= 2 || achats.length >= 1;
   const fmt = (ar: number) => formatMontant(ar, settings);
@@ -246,6 +248,13 @@ export default function DashboardAnalytics({ data }: DashboardAnalyticsProps) {
               </time>
             </p>
           )}
+        </div>
+      )}
+
+      {paliersJirama && (
+        <div className="analytics-section">
+          <h4 className="analytics-section-title">Paliers tarifaires détectés</h4>
+          <p className="analytics-value">{paliersJirama.message}</p>
         </div>
       )}
 

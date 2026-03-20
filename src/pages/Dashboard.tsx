@@ -5,6 +5,7 @@ import DashboardCards, { ProchainAchatCTA } from '../components/DashboardCards';
 import DashboardAnalytics from '../components/DashboardAnalytics';
 import SoldeChart from '../components/SoldeChart';
 import ConsommationChart from '../components/ConsommationChart';
+import KwhMoisChart from '../components/KwhMoisChart';
 import {
   isAlerteCreditFaible,
   getMessageAvertissementPrevision,
@@ -13,8 +14,8 @@ import {
   getRelevesTries,
 } from '../lib/calculs';
 import { getAnomalieConsommation } from '../lib/analytics';
-import { loadSettings } from '../lib/storage';
 import { getConseilContextuel } from '../lib/conseils';
+import { useSettings } from '../context/SettingsContext';
 
 export default function Dashboard() {
   const { data } = useApp();
@@ -35,7 +36,7 @@ export default function Dashboard() {
   const anomalie = getAnomalieConsommation(releves);
   const showAnomalieAlert = hasReleves && anomalie?.isPic === true;
 
-  const settings = loadSettings();
+  const { settings } = useSettings();
   const budgetAr = settings.budgetMensuelAr;
   const prixMoyen = getPrixMoyenArPerKwh(achats);
   const coutMensuel =
@@ -52,8 +53,7 @@ export default function Dashboard() {
     : 0;
 
   const conseil = getConseilContextuel(data, prevision);
-  const settingsChart = loadSettings();
-  const periodeGraphiques = settingsChart.periodeGraphiques ?? '30';
+  const periodeGraphiques = settings.periodeGraphiques ?? '30';
 
   const currentMonthKey = (() => {
     const now = new Date();
@@ -113,6 +113,7 @@ export default function Dashboard() {
         <SoldeChart releves={releves} periodeJours={periodeGraphiques === 'tout' ? undefined : parseInt(periodeGraphiques, 10)} />
         <ConsommationChart releves={releves} periodeJours={periodeGraphiques === 'tout' ? undefined : parseInt(periodeGraphiques, 10)} />
       </div>
+      <KwhMoisChart data={data} />
       <ProchainAchatCTA data={data} />
       <DashboardAnalytics data={data} />
     </div>

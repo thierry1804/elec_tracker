@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker';
 import { fr } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useApp } from '../context/AppContext';
+import { useModalA11y } from '../hooks/useModalA11y';
 import type { Releve } from '../types';
 import './Modal.css';
 
@@ -40,6 +41,7 @@ interface FieldErrors {
 
 export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
   const { addReleve, updateReleve } = useApp();
+  const modalRef = useModalA11y(onClose);
   const isEdit = !!releve;
   const [dateIso, setDateIso] = useState('');
   const [timeStr, setTimeStr] = useState('');
@@ -95,7 +97,7 @@ export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
 
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
-      <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog">
+      <div className="modal" ref={modalRef} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
           <h2>{isEdit ? 'Modifier le relevé' : 'Nouveau relevé'}</h2>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Fermer">

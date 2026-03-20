@@ -21,6 +21,12 @@ export interface AppData {
 
 export type TabId = 'dashboard' | 'historique' | 'achats';
 
+export interface Compteur {
+  id: string;
+  nom: string;
+}
+
+
 /** Paramètres pour l’IA de prévision (clé API, modèle, etc.). */
 export interface AiSettings {
   apiKey: string;
@@ -40,4 +46,8 @@ export interface AppSettings {
   periodeGraphiques?: '7' | '30' | '90' | 'tout';
   /** Notes persistantes par mois (clé au format YYYY-MM). */
   evenementsParMois?: Record<string, string>;
+  /** Liste des compteurs (multi-logement). */
+  compteurs?: Compteur[];
+  /** ID du compteur actuellement sélectionné. */
+  compteurActifId?: string;
 }

@@ -8,6 +8,7 @@ import ReminderInAppBanner from './ReminderInAppBanner';
 import { LayoutActionsProvider } from '../context/LayoutContext';
 import { PrevisionProvider } from '../context/PrevisionContext';
 import { useApp } from '../context/AppContext';
+import { useSettings } from '../context/SettingsContext';
 import './Layout.css';
 
 const formatDate = (d: Date) =>
@@ -28,6 +29,10 @@ const IconHamburger = () => (
 
 export default function Layout() {
   const { data } = useApp();
+  const { settings } = useSettings();
+  const compteurActif = settings.compteurActifId
+    ? (settings.compteurs ?? []).find((c) => c.id === settings.compteurActifId)
+    : null;
   const [showReleve, setShowReleve] = useState(false);
   const [showAchat, setShowAchat] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -81,6 +86,11 @@ export default function Layout() {
               <span className="logo-name">ElecTracker</span>
               <span className="badge-prepaye badge-prepaye-full">PRÉPAYÉ</span>
               <span className="badge-prepaye badge-prepaye-short" aria-label="Prépayé">P</span>
+              {compteurActif && (
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginLeft: '0.35rem' }}>
+                  ({compteurActif.nom})
+                </span>
+              )}
             </div>
             <time className="date" dateTime={new Date().toISOString()}>
               {today}

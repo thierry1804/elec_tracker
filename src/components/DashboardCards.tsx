@@ -4,8 +4,8 @@ import {
   getCoutMensuelEstime,
   isPrevisionPeuFiable,
 } from '../lib/calculs';
-import { loadSettings } from '../lib/storage';
 import type { AppData } from '../types';
+import { useSettings } from '../context/SettingsContext';
 import { usePrevision } from '../context/PrevisionContext';
 import { useLayoutActions } from '../context/LayoutContext';
 import ArcGauge from './ArcGauge';
@@ -87,7 +87,7 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
       : null;
   const previsionPeuFiable = isPrevisionPeuFiable(releves);
 
-  const settings = loadSettings();
+  const { settings } = useSettings();
   const budgetAr = settings.budgetMensuelAr;
   const objectifKwh = settings.objectifKwhMois;
   const budgetOk =

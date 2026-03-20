@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker';
 import { fr } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useApp } from '../context/AppContext';
+import { useModalA11y } from '../hooks/useModalA11y';
 import type { Achat } from '../types';
 import './Modal.css';
 
@@ -52,6 +53,7 @@ function getInitialState(achat?: Achat | null) {
 
 export default function AchatForm({ onClose, achat }: AchatFormProps) {
   const { addAchat, updateAchat } = useApp();
+  const modalRef = useModalA11y(onClose);
   const isEdit = !!achat;
   const [dateIso, setDateIso] = useState('');
   const [timeStr, setTimeStr] = useState('');
@@ -113,7 +115,7 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
 
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
-      <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog">
+      <div className="modal" ref={modalRef} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
           <h2>{isEdit ? "Modifier l'achat" : 'Nouvel achat'}</h2>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Fermer">

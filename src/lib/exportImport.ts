@@ -1,4 +1,5 @@
 import type { AppData } from '../types';
+import { validateAppData } from './validation';
 
 export const EXPORT_VERSION = 1;
 
@@ -47,7 +48,13 @@ export function parseImportFile(file: File): Promise<ExportPayload> {
       try {
         const text = reader.result as string;
         const parsed = JSON.parse(text) as unknown;
-        if (validateImportPayload(parsed)) resolve(parsed);
+        if (validateImportPayload(parsed)) {
+          const validation = validateAppData(parsed.data);
+          if (validation.errors.length > 0) {
+            console.warn('[ElecTracker] Import warnings:', validation.errors);
+          }
+          resolve({ ...parsed, data: validation.sanitized });
+        }
         else reject(new Error('Format de fichier invalide : releves et achats requis.'));
       } catch (e) {
         reject(e instanceof Error ? e : new Error('Fichier JSON invalide.'));

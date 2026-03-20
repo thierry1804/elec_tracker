@@ -6,7 +6,8 @@ import {
   DEFAULT_BASE_URL,
   DEFAULT_MODEL,
 } from '../lib/aiSettings';
-import { getLastSaveTime, loadSettings, saveSettings } from '../lib/storage';
+import { getLastSaveTime } from '../lib/storage';
+import { useSettings } from '../context/SettingsContext';
 import {
   downloadBackup,
   parseImportFile,
@@ -14,6 +15,8 @@ import {
 } from '../lib/exportImport';
 import { exportRelevesCSV, exportAchatsCSV } from '../lib/csvExport';
 import { downloadReportHtml } from '../lib/reportExport';
+import { downloadReportPdf } from '../lib/pdfExport';
+import { generateTextSummary, copyToClipboard } from '../lib/clipboardSummary';
 import { getStoredTheme, setStoredTheme, type Theme } from '../lib/theme';
 import {
   loadReminderSettings,
@@ -21,6 +24,7 @@ import {
   requestNotificationPermission,
 } from '../lib/reminders';
 import { useApp } from '../context/AppContext';
+import { useModalA11y } from '../hooks/useModalA11y';
 import './Modal.css';
 
 interface SettingsModalProps {
@@ -158,6 +162,8 @@ function formatLastSave(iso: string | null): string {
 
 export default function SettingsModal({ onClose }: SettingsModalProps) {
   const { data, replaceData, mergeAndSetData } = useApp();
+  const { settings: currentSettings, updateSettings } = useSettings();
+  const modalRef = useModalA11y(onClose);
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState(DEFAULT_BASE_URL);
   const [model, setModel] = useState(DEFAULT_MODEL);
@@ -165,6 +171,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
   const [lastSave, setLastSave] = useState<string | null>(() => getLastSaveTime());
   const [importPayload, setImportPayload] = useState<ExportPayload | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [clipboardOk, setClipboardOk] = useState(false);
   const [theme, setTheme] = useState<Theme>(() => getStoredTheme() ?? 'system');
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderDaysBefore, setReminderDaysBefore] = useState(3);
@@ -193,14 +200,13 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
   }, []);
 
   useEffect(() => {
-    const s = loadSettings();
-    setBudgetMensuelAr(s.budgetMensuelAr != null ? String(s.budgetMensuelAr) : '');
-    setObjectifKwhMois(s.objectifKwhMois != null ? String(s.objectifKwhMois) : '');
-    setUniteAffichage(s.uniteAffichage ?? 'ar');
-    setArrondiMontant(s.arrondiMontant ?? 'entier');
-    setPeriodeGraphiques(s.periodeGraphiques ?? '30');
-    setNoteDuMois(s.evenementsParMois?.[currentMonthKey] ?? '');
-  }, [currentMonthKey]);
+    setBudgetMensuelAr(currentSettings.budgetMensuelAr != null ? String(currentSettings.budgetMensuelAr) : '');
+    setObjectifKwhMois(currentSettings.objectifKwhMois != null ? String(currentSettings.objectifKwhMois) : '');
+    setUniteAffichage(currentSettings.uniteAffichage ?? 'ar');
+    setArrondiMontant(currentSettings.arrondiMontant ?? 'entier');
+    setPeriodeGraphiques(currentSettings.periodeGraphiques ?? '30');
+    setNoteDuMois(currentSettings.evenementsParMois?.[currentMonthKey] ?? '');
+  }, [currentMonthKey, currentSettings]);
 
   const handleReminderToggle = async (checked: boolean) => {
     if (checked) {
@@ -238,54 +244,39 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
   const handleBudgetChange = (value: string) => {
     setBudgetMensuelAr(value);
     const n = parseFloat(value.replace(',', '.'));
-    const prev = loadSettings();
-    saveSettings({
-      ...prev,
-      budgetMensuelAr: Number.isFinite(n) && n >= 0 ? n : undefined,
-    });
+    updateSettings({ budgetMensuelAr: Number.isFinite(n) && n >= 0 ? n : undefined });
   };
 
   const handleObjectifKwhChange = (value: string) => {
     setObjectifKwhMois(value);
     const n = parseFloat(value.replace(',', '.'));
-    const prev = loadSettings();
-    saveSettings({
-      ...prev,
-      objectifKwhMois: Number.isFinite(n) && n >= 0 ? n : undefined,
-    });
+    updateSettings({ objectifKwhMois: Number.isFinite(n) && n >= 0 ? n : undefined });
   };
 
   const handleUniteAffichageChange = (value: 'ar' | 'kar') => {
     setUniteAffichage(value);
-    const prev = loadSettings();
-    saveSettings({ ...prev, uniteAffichage: value });
+    updateSettings({ uniteAffichage: value });
   };
 
   const handleArrondiMontantChange = (value: 'entier' | 'decimales') => {
     setArrondiMontant(value);
-    const prev = loadSettings();
-    saveSettings({ ...prev, arrondiMontant: value });
+    updateSettings({ arrondiMontant: value });
   };
 
   const handlePeriodeGraphiquesChange = (value: '7' | '30' | '90' | 'tout') => {
     setPeriodeGraphiques(value);
-    const prev = loadSettings();
-    saveSettings({ ...prev, periodeGraphiques: value });
+    updateSettings({ periodeGraphiques: value });
   };
 
   const handleNoteDuMoisChange = (value: string) => {
     setNoteDuMois(value);
-    const prev = loadSettings();
-    const evenements = { ...(prev.evenementsParMois ?? {}) };
+    const evenements = { ...(currentSettings.evenementsParMois ?? {}) };
     if (value.trim()) {
       evenements[currentMonthKey] = value;
     } else {
       delete evenements[currentMonthKey];
     }
-    saveSettings({
-      ...prev,
-      evenementsParMois: Object.keys(evenements).length > 0 ? evenements : undefined,
-    });
+    updateSettings({ evenementsParMois: Object.keys(evenements).length > 0 ? evenements : undefined });
   };
 
   useEffect(() => {
@@ -371,7 +362,7 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
 
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
-      <div className="modal modal-settings" onClick={(e) => e.stopPropagation()} role="dialog">
+      <div className="modal modal-settings" ref={modalRef} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
           <h2>Paramètres</h2>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Fermer">
@@ -421,6 +412,87 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
               >
                 <IconMoon />
               </button>
+            </div>
+          </section>
+
+          {/* Section Multi-compteur */}
+          <section className="settings-section settings-card" aria-labelledby="compteur-heading">
+            <h3 id="compteur-heading" className="settings-card-title settings-card-title-with-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              Compteur
+            </h3>
+            <p className="settings-hint settings-hint-inline">
+              Gérez plusieurs compteurs (maison, bureau, etc.).
+            </p>
+            <div className="ai-settings-fields">
+              <div className="ai-field-row">
+                <label htmlFor="settings-compteur">Compteur actif</label>
+                <select
+                  id="settings-compteur"
+                  className="objective-field-input"
+                  value={currentSettings.compteurActifId ?? ''}
+                  onChange={(e) => {
+                    updateSettings({ compteurActifId: e.target.value || undefined });
+                    window.location.reload();
+                  }}
+                  style={{ maxWidth: '14rem' }}
+                >
+                  <option value="">Principal (défaut)</option>
+                  {(currentSettings.compteurs ?? []).map((c) => (
+                    <option key={c.id} value={c.id}>{c.nom}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  className="objective-field-input"
+                  placeholder="Nom du nouveau compteur"
+                  id="new-compteur-name"
+                  style={{ maxWidth: '10rem' }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    const input = document.getElementById('new-compteur-name') as HTMLInputElement;
+                    const nom = input?.value.trim();
+                    if (!nom) return;
+                    const id = `compteur-${Date.now()}`;
+                    const compteurs = [...(currentSettings.compteurs ?? []), { id, nom }];
+                    updateSettings({ compteurs });
+                    input.value = '';
+                  }}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  + Ajouter
+                </button>
+              </div>
+              {(currentSettings.compteurs ?? []).length > 0 && (
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                  {(currentSettings.compteurs ?? []).map((c) => (
+                    <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.2rem 0' }}>
+                      <span>{c.nom}</span>
+                      <button
+                        type="button"
+                        className="btn-delete btn-delete-icon"
+                        style={{ padding: '0.2rem' }}
+                        onClick={() => {
+                          const compteurs = (currentSettings.compteurs ?? []).filter((x) => x.id !== c.id);
+                          const patch: Partial<typeof currentSettings> = { compteurs };
+                          if (currentSettings.compteurActifId === c.id) patch.compteurActifId = undefined;
+                          updateSettings(patch);
+                          if (currentSettings.compteurActifId === c.id) window.location.reload();
+                        }}
+                        title="Supprimer"
+                        aria-label={`Supprimer ${c.nom}`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
 
@@ -654,6 +726,40 @@ export default function SettingsModal({ onClose }: SettingsModalProps) {
                 aria-label="Exporter le rapport HTML"
               >
                 <IconFileReport />
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary backup-btn backup-btn--icon"
+                onClick={() => downloadReportPdf(data)}
+                title="Exporter le rapport (PDF)"
+                aria-label="Exporter le rapport PDF"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <path d="M10 12h4M10 16h4M10 20h2" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className={`btn btn-secondary backup-btn backup-btn--icon${clipboardOk ? ' active' : ''}`}
+                onClick={async () => {
+                  const text = generateTextSummary(data);
+                  const ok = await copyToClipboard(text);
+                  if (ok) {
+                    setClipboardOk(true);
+                    setTimeout(() => setClipboardOk(false), 2000);
+                  }
+                }}
+                title={clipboardOk ? 'Copié !' : 'Copier le résumé (texte)'}
+                aria-label="Copier le résumé en texte"
+              >
+                {clipboardOk ? <IconCheck /> : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                )}
               </button>
             </div>
             {importError && (
