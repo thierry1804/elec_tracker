@@ -17,6 +17,7 @@ export default function MobileBottomNav() {
           key={to}
           to={to}
           end={'end' in rest ? rest.end : undefined}
+          aria-label={label}
           className={({ isActive }) =>
             `mobile-bottom-nav-link${isActive ? ' mobile-bottom-nav-link-active' : ''}`
           }

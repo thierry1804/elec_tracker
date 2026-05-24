@@ -79,31 +79,33 @@ export default function Layout() {
                   {dateShort}
                 </time>
               </div>
-              <div className="header-actions header-actions-desk">
-                <button type="button" className="btn btn-secondary btn-labeled" onClick={openReleve}>
-                  <IconReleve />
-                  <span>Relevé</span>
-                </button>
-                <button type="button" className="btn btn-primary btn-labeled" onClick={openAchat}>
-                  <IconAchat />
-                  <span>Achat</span>
-                </button>
+              <div className="header-right">
+                <nav className="nav nav-desktop" aria-label="Navigation principale">
+                  {navItems.map(({ to, label, Icon, ...rest }) => (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end={'end' in rest ? rest.end : undefined}
+                      aria-label={label}
+                      className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                    >
+                      <Icon />
+                      <span>{label}</span>
+                    </NavLink>
+                  ))}
+                </nav>
+                <div className="header-actions header-actions-desk">
+                  <button type="button" className="btn btn-secondary btn-labeled" onClick={openReleve}>
+                    <IconReleve />
+                    <span>Relevé</span>
+                  </button>
+                  <button type="button" className="btn btn-primary btn-labeled" onClick={openAchat}>
+                    <IconAchat />
+                    <span>Achat</span>
+                  </button>
+                </div>
               </div>
             </header>
-
-            <nav className="nav nav-desktop" aria-label="Navigation principale">
-              {navItems.map(({ to, label, Icon, ...rest }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  end={'end' in rest ? rest.end : undefined}
-                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-                >
-                  <Icon />
-                  <span>{label}</span>
-                </NavLink>
-              ))}
-            </nav>
           </div>
 
           <div className="layout-spacer" aria-hidden="true" />
