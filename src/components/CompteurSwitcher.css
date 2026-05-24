@@ -1,0 +1,64 @@
+.compteur-switcher {
+  position: relative;
+  margin-left: 0.25rem;
+}
+
+.compteur-switcher-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.125rem 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  cursor: pointer;
+  max-width: 8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compteur-switcher-btn:hover {
+  color: var(--text);
+}
+
+.compteur-switcher-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  min-width: 10rem;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+
+.compteur-switcher-menu button {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: left;
+  color: var(--text);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.compteur-switcher-menu button:hover,
+.compteur-switcher-menu button[aria-selected='true'] {
+  background: var(--surface-raised);
+}
+
+.compteur-switcher-menu button[aria-selected='true'] {
+  color: var(--accent);
+}

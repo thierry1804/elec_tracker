@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PageHeader from '../components/PageHeader';
 import { useApp } from '../context/AppContext';
 import {
   getRelevesTries,
@@ -8,6 +9,7 @@ import {
 import type { ConsoEntreReleves } from '../lib/calculs';
 import ReleveForm from '../components/ReleveForm';
 import DeleteConfirmButton from '../components/DeleteConfirmButton';
+import { useLayoutActions } from '../context/LayoutContext';
 
 const IconEdit = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -17,17 +19,14 @@ const IconEdit = () => (
 );
 
 export default function Historique() {
-  const { data, deleteReleve } = useApp();
+  const { data, deleteReleve, restoreReleve } = useApp();
+  const layoutActions = useLayoutActions();
   const [editingReleveId, setEditingReleveId] = useState<string | null>(null);
   const tries = getRelevesTries(data.releves);
   const consos = getConsommationsEntreReleves(data.releves);
   const editingReleve = editingReleveId
     ? data.releves.find((r) => r.id === editingReleveId) ?? null
     : null;
-
-  const handleDelete = (id: string) => {
-    deleteReleve(id);
-  };
 
   const formatDateHeure = (d: string) => {
     const date = new Date(d);
@@ -102,16 +101,26 @@ export default function Historique() {
 
   if (tries.length === 0) {
     return (
-      <div className="page-empty">
-        <p>Aucun relevé enregistré. Ajoutez un relevé depuis le bouton « + Relevé ».</p>
+      <div className="page-empty dashboard-empty">
+        <h2 className="dashboard-empty-title">Relevés</h2>
+        <p className="dashboard-empty-text">
+          Aucun relevé enregistré. Notez le kWh restant affiché sur votre compteur pour démarrer le suivi.
+        </p>
+        <button type="button" className="btn btn-primary" onClick={() => layoutActions?.openReleve()}>
+          + Premier relevé
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="historique">
-      <h2>Historique des relevés</h2>
-      <div className="table-wrapper">
+    <div className="page historique">
+      <PageHeader
+        title="Relevés"
+        lead="Historique des lectures et consommations calculées."
+      />
+      <div className="page-stack">
+        <div className="table-wrapper">
         <table className="data-table">
           <thead>
             <tr>
@@ -149,7 +158,9 @@ export default function Historique() {
                       </button>
                       <DeleteConfirmButton
                         itemLabel="ce relevé"
-                        onConfirm={() => handleDelete(releve.id)}
+                        onConfirm={() => deleteReleve(releve.id)}
+                        onUndo={() => restoreReleve(releve)}
+                        undoMessage="Relevé supprimé"
                         icon={
                           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                         }
@@ -161,6 +172,7 @@ export default function Historique() {
             })}
           </tbody>
         </table>
+      </div>
       </div>
       {editingReleve && (
         <ReleveForm

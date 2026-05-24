@@ -1,0 +1,416 @@
+/* ── Page Paramètres (alignée dashboard / graphiques) ── */
+
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Onglets ── */
+
+.settings-tabs {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+.settings-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.settings-tab-btn {
+  flex-shrink: 0;
+  padding: 0.625rem 0.875rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+}
+
+.settings-tab-btn:hover {
+  color: var(--text);
+}
+
+.settings-tab-btn--active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+/* ── Panneau contenu ── */
+
+.settings-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0;
+}
+
+/* ── Cartes (même langage que .chart-container) ── */
+
+.parametres .settings-section {
+  margin: 0;
+}
+
+.parametres .settings-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.125rem 1.25rem;
+  box-shadow: var(--shadow-sm);
+  transition: none;
+}
+
+.parametres .settings-card:hover {
+  border-color: var(--border);
+}
+
+.parametres .settings-card-title {
+  margin: 0 0 0.25rem !important;
+  font-size: 0.8125rem !important;
+  font-weight: 600 !important;
+  letter-spacing: normal !important;
+  color: var(--label) !important;
+}
+
+.parametres .settings-card-title-with-icon svg {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+
+.parametres .settings-hint {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 0 0 0.875rem;
+  line-height: 1.45;
+}
+
+.parametres .settings-hint-inline {
+  margin-top: 0;
+  margin-bottom: 0.875rem;
+}
+
+.parametres .settings-card .settings-hint:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Champs ── */
+
+.parametres .ai-settings-fields {
+  gap: 0.875rem;
+  margin-bottom: 0;
+}
+
+.parametres .settings-field-grid {
+  display: grid;
+  gap: 0.875rem;
+}
+
+@media (min-width: 480px) {
+  .parametres .settings-field-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .parametres .settings-field-grid .ai-field-row:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    max-width: calc(50% - 0.4375rem);
+  }
+}
+
+.parametres .ai-field-row label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--label);
+  margin-bottom: 0.3rem;
+}
+
+.parametres .ai-field-row input,
+.parametres .ai-field-row select,
+.parametres .objective-field-input,
+.parametres .settings-card textarea.objective-field-input {
+  font-size: 0.8125rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.parametres .ai-field-row input:focus,
+.parametres .ai-field-row select:focus,
+.parametres .objective-field-input:focus {
+  outline: none;
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.parametres .settings-field-narrow {
+  max-width: 11rem;
+}
+
+.parametres .settings-field-medium {
+  max-width: 14rem;
+}
+
+.parametres .objective-fields {
+  gap: 0.875rem;
+}
+
+.parametres .objective-field-row .objective-field-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--label);
+}
+
+/* ── Thème ── */
+
+.parametres .theme-toggle {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px;
+  width: 100%;
+  max-width: 12rem;
+}
+
+.parametres .theme-toggle-option {
+  border-radius: 4px;
+  min-height: 36px;
+}
+
+.parametres .theme-toggle-option-active {
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
+}
+
+/* ── Compteurs ── */
+
+.settings-compteur-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.settings-compteur-add .objective-field-input {
+  flex: 1 1 10rem;
+  min-width: 0;
+  max-width: 14rem;
+}
+
+.settings-compteur-list {
+  margin-top: 0.25rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.settings-compteur-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.8125rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.settings-compteur-row:last-child {
+  border-bottom: none;
+}
+
+.settings-compteur-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Toggles rappels ── */
+
+.parametres .reminder-toggle-text {
+  font-size: 0.8125rem;
+}
+
+.parametres .reminder-days-field .reminder-days-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--label);
+}
+
+.parametres .reminder-days-input {
+  font-size: 0.8125rem;
+}
+
+/* ── Sauvegarde : grille avec libellés ── */
+
+.parametres .backup-last-save {
+  font-size: 0.75rem !important;
+  color: var(--muted) !important;
+}
+
+.parametres .backup-last-save strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.parametres .backup-actions--icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+  gap: 0.375rem;
+}
+
+.parametres .backup-actions--icons .backup-btn--icon {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.5rem;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0.375rem 0.25rem;
+}
+
+.parametres .backup-actions--icons .backup-btn--icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.parametres .backup-btn-label {
+  line-height: 1.1;
+  text-align: center;
+}
+
+.parametres .import-summary {
+  margin-top: 0.875rem;
+  padding: 0.875rem;
+  background: var(--bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+}
+
+.parametres .import-summary .modal-actions {
+  margin-top: 0.75rem;
+}
+
+/* ── IA ── */
+
+.parametres .ai-actions {
+  gap: 0.375rem;
+  margin-top: 0.25rem;
+}
+
+.parametres .ai-actions .ai-action-btn {
+  min-height: 2.25rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.parametres .settings-error {
+  font-size: 0.8125rem;
+  margin-top: 0.625rem;
+}
+
+.parametres .settings-note-clear {
+  margin-top: 0.5rem;
+}
+
+.parametres .settings-textarea-full {
+  width: 100%;
+  resize: vertical;
+}
+
+.parametres .settings-toggle-spaced {
+  margin-top: 0.75rem;
+}
+
+.parametres .ai-actions .btn-sm {
+  font-size: 0.8125rem;
+}
+
+/* ── Desktop : sidebar onglets ── */
+
+@media (min-width: 641px) {
+  .settings-page {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
+
+  .settings-tabs {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    overflow: visible;
+    border-bottom: none;
+    border-right: 1px solid var(--border);
+    margin-bottom: 0;
+    padding-right: 1rem;
+    min-width: 9.5rem;
+    position: sticky;
+    top: 0.5rem;
+    align-self: flex-start;
+  }
+
+  .settings-tab-btn {
+    width: 100%;
+    border-bottom: none;
+    border-left: 2px solid transparent;
+    margin-bottom: 0;
+    margin-left: -1px;
+    padding: 0.5rem 0.625rem;
+    border-radius: 0 6px 6px 0;
+  }
+
+  .settings-tab-btn--active {
+    border-bottom-color: transparent;
+    border-left-color: var(--accent);
+    background: var(--surface-raised);
+  }
+
+  .parametres .backup-actions--icons {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .parametres .settings-field-narrow,
+  .parametres .settings-field-medium {
+    max-width: none;
+    width: 100%;
+  }
+
+  .parametres .ai-field-row select,
+  .parametres .ai-field-row input {
+    width: 100%;
+  }
+
+  .parametres .theme-toggle {
+    max-width: none;
+  }
+
+  .parametres .backup-actions--icons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

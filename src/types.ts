@@ -19,7 +19,7 @@ export interface AppData {
   releves: Releve[];
 }
 
-export type TabId = 'dashboard' | 'historique' | 'achats';
+export type TabId = 'dashboard' | 'releves' | 'achats' | 'parametres';
 
 export interface Compteur {
   id: string;

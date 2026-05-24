@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import PageHeader from '../components/PageHeader';
 import { useApp } from '../context/AppContext';
 import { useLayoutActions } from '../context/LayoutContext';
 import AchatForm from '../components/AchatForm';
@@ -14,7 +15,7 @@ const IconEdit = () => (
 );
 
 export default function Achats() {
-  const { data, deleteAchat } = useApp();
+  const { data, deleteAchat, restoreAchat } = useApp();
   const layoutActions = useLayoutActions();
   const [editingAchatId, setEditingAchatId] = useState<string | null>(null);
   const editingAchat = editingAchatId ? data.achats.find((a) => a.id === editingAchatId) ?? null : null;
@@ -52,40 +53,40 @@ export default function Achats() {
     prix: Math.round(a.prixUnitaireArPerKwh),
   }));
 
-  const handleDelete = (id: string) => {
-    deleteAchat(id);
-  };
-
   if (achats.length === 0) {
     return (
-      <div className="page-empty">
-        <p>Aucun achat enregistré. Ajoutez un achat depuis le bouton « + Achat ».</p>
+      <div className="page-empty dashboard-empty">
+        <h2 className="dashboard-empty-title">Achats</h2>
+        <p className="dashboard-empty-text">
+          Aucun achat enregistré. Saisissez montant et crédit reçu à chaque recharge.
+        </p>
+        <button type="button" className="btn btn-primary" onClick={() => layoutActions?.openAchat()}>
+          + Premier achat
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="achats">
-      <h2>Historique des achats</h2>
-      {showReleveCta && (
-        <div className="alert-banner alert-info" role="status" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <span style={{ flex: 1 }}>Pour améliorer les calculs de consommation, ajoutez un relevé manuel après ce dernier achat.</span>
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            onClick={() => layoutActions?.openReleve()}
-            style={{ whiteSpace: 'nowrap' }}
-          >
-            + Relevé
-          </button>
-        </div>
-      )}
-      {chartData.length > 0 && (
-        <div style={{ marginBottom: '1.5rem' }}>
-          <PrixAchatsChart chartData={chartData} />
-        </div>
-      )}
-      <div className="table-wrapper">
+    <div className="page achats">
+      <PageHeader title="Achats" lead="Recharges enregistrées et prix unitaire." />
+      <div className="page-stack">
+        {showReleveCta && (
+          <div className="alert-banner alert-info alert-banner-row" role="status">
+            <span className="alert-banner-text">
+              Pour améliorer les calculs de consommation, ajoutez un relevé manuel après ce dernier achat.
+            </span>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => layoutActions?.openReleve()}
+            >
+              + Relevé
+            </button>
+          </div>
+        )}
+        {chartData.length > 0 && <PrixAchatsChart chartData={chartData} />}
+        <div className="table-wrapper">
         <table className="data-table">
           <thead>
             <tr>
@@ -116,7 +117,9 @@ export default function Achats() {
                     </button>
                       <DeleteConfirmButton
                         itemLabel="cet achat"
-                        onConfirm={() => handleDelete(a.id)}
+                        onConfirm={() => deleteAchat(a.id)}
+                        onUndo={() => restoreAchat(a)}
+                        undoMessage="Achat supprimé"
                         icon={
                           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                         }
@@ -127,6 +130,7 @@ export default function Achats() {
             ))}
           </tbody>
         </table>
+      </div>
       </div>
       {editingAchat && (
         <AchatForm achat={editingAchat} onClose={() => setEditingAchatId(null)} />

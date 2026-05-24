@@ -35,15 +35,14 @@ export default function ReminderInAppBanner() {
       : `Environ ${joursRestants} jour${joursRestants !== 1 ? 's' : ''} avant épuisement du crédit. Pensez à recharger.`;
 
   return (
-    <div className="alert-banner alert-warning" role="alert" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-      <span style={{ flex: 1 }}>{message}</span>
+    <div className="alert-banner alert-warning alert-banner-row" role="alert">
+      <span className="alert-banner-text">{message}</span>
       <button
         type="button"
         className="btn btn-primary btn-sm"
-        onClick={() => layoutActions?.openReleve()}
-        style={{ whiteSpace: 'nowrap' }}
+        onClick={() => layoutActions?.openAchat()}
       >
-        + Relevé
+        + Achat
       </button>
     </div>
   );

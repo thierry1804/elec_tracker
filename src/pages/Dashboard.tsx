@@ -17,6 +17,8 @@ import {
 import { getAnomalieConsommation } from '../lib/analytics';
 import { getConseilContextuel } from '../lib/conseils';
 import { useSettings } from '../context/SettingsContext';
+import CollapsibleSection from '../components/CollapsibleSection';
+import PageHeader from '../components/PageHeader';
 
 export default function Dashboard() {
   const { data } = useApp();
@@ -74,6 +76,9 @@ export default function Dashboard() {
           {(joursRestants ?? 0) !== 1 ? 's' : ''}. Pensez à recharger à temps.
         </>
       ),
+      action: layoutActions
+        ? { label: 'Recharger', onClick: () => layoutActions.openAchat() }
+        : undefined,
     });
   }
   if (showAnomalieAlert && anomalie) {
@@ -137,9 +142,13 @@ export default function Dashboard() {
         <div className="dashboard-empty" role="status">
           <h2 className="dashboard-empty-title">Bienvenue sur ElecTracker</h2>
           <p className="dashboard-empty-text">
-            Saisissez votre premier relevé de compteur pour afficher votre solde, vos graphiques et
-            vos estimations de consommation.
+            Trois étapes pour suivre votre électricité prépayée :
           </p>
+          <ol className="dashboard-empty-steps">
+            <li><strong>Relevé initial</strong> — notez le kWh restant sur le compteur</li>
+            <li><strong>Achat</strong> — enregistrez chaque recharge (montant + crédit)</li>
+            <li><strong>Relevés réguliers</strong> — mettez à jour le solde pour affiner les estimations</li>
+          </ol>
           <button
             type="button"
             className="btn btn-primary"
@@ -153,16 +162,28 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="dashboard">
+    <div className="dashboard page">
+      <PageHeader
+        title="Dashboard"
+        lead={
+          joursRestants != null
+            ? `${creditRestant.toFixed(1).replace('.', ',')} kWh restants · ~${joursRestants} j`
+            : `${creditRestant.toFixed(1).replace('.', ',')} kWh restants`
+        }
+      />
+      <div className="page-stack">
       <DashboardAlerts alerts={dashboardAlerts} />
       <DashboardCards data={data} />
       <div className="grid-2">
         <SoldeChart releves={releves} />
         <ConsommationChart releves={releves} />
       </div>
-      <KwhMoisChart data={data} />
-      <ProchainAchatCTA data={data} />
-      <DashboardAnalytics data={data} />
+      <CollapsibleSection title="Analyse détaillée" defaultOpen={false}>
+        <KwhMoisChart data={data} />
+        <ProchainAchatCTA data={data} />
+        <DashboardAnalytics data={data} />
+      </CollapsibleSection>
+      </div>
     </div>
   );
 }

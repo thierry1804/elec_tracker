@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker';
 import { fr } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useApp } from '../context/AppContext';
+import { useToast } from '../context/ToastContext';
 import { useModalA11y } from '../hooks/useModalA11y';
 import type { Releve } from '../types';
 import './Modal.css';
@@ -41,6 +42,7 @@ interface FieldErrors {
 
 export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
   const { addReleve, updateReleve } = useApp();
+  const { showToast } = useToast();
   const modalRef = useModalA11y(onClose);
   const isEdit = !!releve;
   const [dateIso, setDateIso] = useState('');
@@ -75,12 +77,14 @@ export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
       const dateHeure = new Date(dateIso + 'T00:00:00');
       dateHeure.setHours(h, m, 0, 0);
       updateReleve(releve.id, { date: dateHeure.toISOString(), creditRestantKwh: kwh });
+      showToast({ message: `Relevé modifié · ${kwh.toFixed(1).replace('.', ',')} kWh` });
       onClose();
     } else {
       const [h, m] = timeStr.split(':').map(Number);
       const dateHeure = new Date(dateIso + 'T00:00:00');
       dateHeure.setHours(h, m, 0, 0);
       addReleve(dateHeure.toISOString(), kwh);
+      showToast({ message: `Relevé enregistré · ${kwh.toFixed(1).replace('.', ',')} kWh` });
       onClose();
     }
   };
@@ -96,8 +100,8 @@ export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} role="presentation">
-      <div className="modal" ref={modalRef} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+    <div className="modal-overlay modal-sheet-overlay" onClick={onClose} role="presentation">
+      <div className="modal modal-sheet" ref={modalRef} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
           <h2>{isEdit ? 'Modifier le relevé' : 'Nouveau relevé'}</h2>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Fermer">
@@ -105,7 +109,12 @@ export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="modal-form">
-          <div>
+          <div className="modal-body">
+          {!isEdit && (
+            <p className="modal-form-hint">Lisez le kWh restant affiché sur votre compteur.</p>
+          )}
+          <div className="modal-field-row">
+          <div className="modal-field">
             <label htmlFor="releve-date">Date du relevé</label>
             <DatePicker
               id="releve-date"
@@ -128,8 +137,8 @@ export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
               </p>
             )}
           </div>
-          <div>
-            <label htmlFor="releve-time">Heure du relevé</label>
+          <div className="modal-field">
+            <label htmlFor="releve-time">Heure</label>
             <input
               id="releve-time"
               type="time"
@@ -145,7 +154,8 @@ export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
               </p>
             )}
           </div>
-          <div>
+          </div>
+          <div className="modal-field">
             <label htmlFor="releve-credit">Crédit restant (kWh)</label>
             <input
               id="releve-credit"
@@ -164,6 +174,8 @@ export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
               </p>
             )}
           </div>
+          </div>
+          <div className="modal-footer">
           <div className="modal-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Annuler
@@ -171,6 +183,7 @@ export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
             <button type="submit" className="btn btn-primary">
               Enregistrer
             </button>
+          </div>
           </div>
         </form>
       </div>

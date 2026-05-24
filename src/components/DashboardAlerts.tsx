@@ -2,11 +2,12 @@ import { useState } from 'react';
 
 type AlertKind = 'critical' | 'warning' | 'info';
 
-interface DashboardAlert {
+export interface DashboardAlert {
   id: string;
   kind: AlertKind;
   message: React.ReactNode;
   priority: number;
+  action?: { label: string; onClick: () => void };
 }
 
 interface DashboardAlertsProps {
@@ -27,13 +28,29 @@ export default function DashboardAlerts({ alerts }: DashboardAlertsProps) {
   const sorted = [...alerts].sort((a, b) => a.priority - b.priority);
   const primary = sorted[0];
   const secondary = sorted.slice(1);
-  const role = primary.kind === 'critical' ? 'alert' : 'status';
+
+  const renderAlert = (alert: DashboardAlert) => (
+    <div
+      key={alert.id}
+      className={`${alertClass(alert.kind)} dashboard-alert-row`}
+      role={alert.kind === 'critical' ? 'alert' : 'status'}
+    >
+      <span className="dashboard-alert-message">{alert.message}</span>
+      {alert.action && (
+        <button
+          type="button"
+          className="btn btn-primary btn-sm dashboard-alert-action"
+          onClick={alert.action.onClick}
+        >
+          {alert.action.label}
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <div className="dashboard-alerts">
-      <div className={alertClass(primary.kind)} role={role}>
-        {primary.message}
-      </div>
+      {renderAlert(primary)}
       {secondary.length > 0 && (
         <>
           <button
@@ -48,15 +65,7 @@ export default function DashboardAlerts({ alerts }: DashboardAlertsProps) {
           </button>
           {expanded && (
             <div className="dashboard-alerts-secondary">
-              {secondary.map((alert) => (
-                <div
-                  key={alert.id}
-                  className={alertClass(alert.kind)}
-                  role={alert.kind === 'critical' ? 'alert' : 'status'}
-                >
-                  {alert.message}
-                </div>
-              ))}
+              {secondary.map(renderAlert)}
             </div>
           )}
         </>
@@ -65,4 +74,4 @@ export default function DashboardAlerts({ alerts }: DashboardAlertsProps) {
   );
 }
 
-export type { DashboardAlert };
+export type { DashboardAlert as DashboardAlertType };

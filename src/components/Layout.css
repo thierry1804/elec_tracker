@@ -17,7 +17,7 @@
 
 .layout-spacer {
   flex-shrink: 0;
-  height: 132px;
+  height: 118px;
 }
 
 .header {
@@ -26,7 +26,6 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.875rem 1.5rem;
-  flex-wrap: wrap;
 }
 
 .header-left {
@@ -42,6 +41,7 @@
   align-items: center;
   gap: 0.625rem;
   margin: 0;
+  flex-wrap: wrap;
 }
 
 .logo-icon {
@@ -75,11 +75,6 @@
   color: var(--accent);
   border: 1px solid var(--badge-border);
   text-transform: uppercase;
-  margin-left: 0.375rem;
-}
-
-.badge-prepaye-short {
-  display: none;
 }
 
 .date {
@@ -88,65 +83,14 @@
   padding-left: 2.125rem;
 }
 
+.date-short {
+  display: none;
+}
+
 .header-actions {
   display: flex;
   gap: 0.375rem;
   flex-shrink: 0;
-}
-
-.header-menu-wrap {
-  display: none;
-  position: relative;
-  flex-shrink: 0;
-}
-
-.header-menu-trigger {
-  padding: 0.5rem;
-}
-
-.header-menu-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  min-width: 180px;
-  padding: 0.375rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.header-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  justify-content: flex-start;
-  text-align: left;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  border-radius: 6px;
-}
-
-.header-menu-item span {
-  white-space: nowrap;
-}
-
-.header-menu-item:hover {
-  background: var(--surface-raised);
-}
-
-.header-actions-desk .btn-icon {
-  border-color: transparent;
-}
-
-.header-actions-desk .btn-icon:hover {
-  background: var(--surface-raised);
 }
 
 .header-actions-desk .btn-labeled {
@@ -176,6 +120,9 @@
 }
 
 .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
   padding: 0.625rem 1rem;
   font-size: 0.8125rem;
   font-weight: 600;
@@ -205,10 +152,16 @@
 }
 
 @media (max-width: 640px) {
+  .layout {
+    --mobile-nav-height: 3.25rem;
+    --fab-size: 48px;
+  }
+}
+
+@media (max-width: 640px) {
   .header {
     padding: 0.75rem 1rem;
     gap: 0.375rem;
-    flex-wrap: nowrap;
   }
 
   .logo-name {
@@ -216,55 +169,41 @@
   }
 
   .badge-prepaye-full {
-    display: none !important;
+    display: none;
   }
 
-  .badge-prepaye-short {
-    display: inline-block !important;
+  .date-long {
+    display: none;
   }
 
-  .badge-prepaye {
-    margin-left: 0.25rem;
-    padding: 0.125rem 0.3rem;
-    font-size: 0.5625rem;
-  }
-
-  .date {
+  .date-short {
+    display: block;
     font-size: 0.6875rem;
     padding-left: 2.125rem;
   }
 
-  .header-left {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
   .header-actions-desk {
-    display: none !important;
+    display: none;
   }
 
-  .header-menu-wrap {
-    display: block;
-    flex-shrink: 0;
-  }
-
-  .nav {
-    padding: 0 1rem;
-  }
-
-  .nav-link {
-    flex: 1 1 0;
-    min-width: 0;
-    padding: 0.5rem 0.375rem;
-    font-size: 0.75rem;
-    text-align: center;
-  }
-
-  .main {
-    padding: 1rem;
+  .nav-desktop {
+    display: none;
   }
 
   .layout-spacer {
-    height: 120px;
+    height: 72px;
+  }
+
+  .main {
+    padding: 1rem 1rem 5.5rem;
+  }
+}
+
+@media (min-width: 641px) {
+  .mobile-bottom-nav,
+  .fab,
+  .action-sheet-backdrop,
+  .action-sheet {
+    display: none !important;
   }
 }

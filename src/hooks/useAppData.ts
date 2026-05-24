@@ -184,6 +184,26 @@ export function useAppData() {
     }));
   }, []);
 
+  const restoreReleve = useCallback((releve: Releve) => {
+    setData((prev) => {
+      if (prev.releves.some((r) => r.id === releve.id)) return prev;
+      const releves = [...prev.releves, releve].sort(
+        (a, b) => dateStrToLocalEndOfDayMs(a.date) - dateStrToLocalEndOfDayMs(b.date)
+      );
+      return { ...prev, releves };
+    });
+  }, []);
+
+  const restoreAchat = useCallback((achat: Achat) => {
+    setData((prev) => {
+      if (prev.achats.some((a) => a.id === achat.id)) return prev;
+      const achats = [...prev.achats, achat].sort(
+        (a, b) => dateStrToLocalEndOfDayMs(a.date) - dateStrToLocalEndOfDayMs(b.date)
+      );
+      return { ...prev, achats };
+    });
+  }, []);
+
   const replaceData = useCallback((newData: AppData) => {
     setData(newData);
   }, []);
@@ -212,6 +232,8 @@ export function useAppData() {
     updateAchat,
     deleteReleve,
     deleteAchat,
+    restoreReleve,
+    restoreAchat,
     replaceData,
     mergeAndSetData,
   };

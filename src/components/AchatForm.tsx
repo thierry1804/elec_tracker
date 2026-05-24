@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker';
 import { fr } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useApp } from '../context/AppContext';
+import { useToast } from '../context/ToastContext';
 import { useModalA11y } from '../hooks/useModalA11y';
 import type { Achat } from '../types';
 import './Modal.css';
@@ -52,7 +53,8 @@ function getInitialState(achat?: Achat | null) {
 }
 
 export default function AchatForm({ onClose, achat }: AchatFormProps) {
-  const { addAchat, updateAchat } = useApp();
+  const { data, addAchat, updateAchat } = useApp();
+  const { showToast } = useToast();
   const modalRef = useModalA11y(onClose);
   const isEdit = !!achat;
   const [dateIso, setDateIso] = useState('');
@@ -69,6 +71,28 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
     setMontantAr(init.montantAr);
     setCreditKwh(init.creditKwh);
   }, [achat?.id]);
+
+  const lastPrix =
+    !isEdit && data.achats.length > 0
+      ? [...data.achats].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(-1)[0]
+          ?.prixUnitaireArPerKwh
+      : undefined;
+
+  const suggestFromMontant = () => {
+    if (!lastPrix || isEdit) return;
+    const montant = parseFloat(montantAr.replace(/\s/g, '').replace(',', '.'));
+    if (!Number.isFinite(montant) || montant <= 0 || creditKwh.trim()) return;
+    const kwh = Math.round((montant / lastPrix) * 100) / 100;
+    setCreditKwh(String(kwh).replace('.', ','));
+  };
+
+  const suggestFromCredit = () => {
+    if (!lastPrix || isEdit) return;
+    const kwh = parseFloat(creditKwh.replace(',', '.'));
+    if (!Number.isFinite(kwh) || kwh <= 0 || montantAr.trim()) return;
+    const montant = Math.round(kwh * lastPrix);
+    setMontantAr(String(montant));
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -96,9 +120,11 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
 
     if (achat) {
       updateAchat(achat.id, { date: dateIsoAvecHeure, montantAr: montant, creditKwh: kwh });
+      showToast({ message: `Achat modifié · ${montant.toLocaleString('fr-FR')} Ar` });
       onClose();
     } else {
       addAchat(dateIsoAvecHeure, montant, kwh);
+      showToast({ message: `Achat enregistré · ${kwh} kWh pour ${montant.toLocaleString('fr-FR')} Ar` });
       onClose();
     }
   };
@@ -114,8 +140,8 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} role="presentation">
-      <div className="modal" ref={modalRef} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+    <div className="modal-overlay modal-sheet-overlay" onClick={onClose} role="presentation">
+      <div className="modal modal-sheet" ref={modalRef} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
           <h2>{isEdit ? "Modifier l'achat" : 'Nouvel achat'}</h2>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Fermer">
@@ -123,7 +149,12 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="modal-form">
-          <div>
+          <div className="modal-body">
+          {!isEdit && (
+            <p className="modal-form-hint">Montant payé et crédit reçu (facture ou SMS opérateur).</p>
+          )}
+          <div className="modal-field-row">
+          <div className="modal-field">
             <label htmlFor="achat-date">Date de l'achat</label>
             <DatePicker
               id="achat-date"
@@ -146,8 +177,8 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
               </p>
             )}
           </div>
-          <div>
-            <label htmlFor="achat-time">Heure de l'achat</label>
+          <div className="modal-field">
+            <label htmlFor="achat-time">Heure</label>
             <input
               id="achat-time"
               type="time"
@@ -163,7 +194,8 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
               </p>
             )}
           </div>
-          <div>
+          </div>
+          <div className="modal-field">
             <label htmlFor="achat-montant">Montant payé (Ar)</label>
             <input
               id="achat-montant"
@@ -171,6 +203,7 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
               inputMode="numeric"
               value={montantAr}
               onChange={(e) => setMontantAr(e.target.value)}
+              onBlur={suggestFromMontant}
               placeholder="ex: 15000"
               className={errors.montantAr ? 'input-invalid' : ''}
               aria-invalid={!!errors.montantAr}
@@ -181,8 +214,13 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
                 {errors.montantAr}
               </p>
             )}
+            {lastPrix != null && (
+              <p className="form-price-hint">
+                Dernier prix : {Math.round(lastPrix).toLocaleString('fr-FR')} Ar/kWh
+              </p>
+            )}
           </div>
-          <div>
+          <div className="modal-field">
             <label htmlFor="achat-credit">Crédit ajouté (kWh)</label>
             <input
               id="achat-credit"
@@ -190,6 +228,7 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
               inputMode="decimal"
               value={creditKwh}
               onChange={(e) => setCreditKwh(e.target.value)}
+              onBlur={suggestFromCredit}
               placeholder="ex: 50"
               className={errors.creditKwh ? 'input-invalid' : ''}
               aria-invalid={!!errors.creditKwh}
@@ -201,6 +240,8 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
               </p>
             )}
           </div>
+          </div>
+          <div className="modal-footer">
           <div className="modal-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               Annuler
@@ -208,6 +249,7 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
             <button type="submit" className="btn btn-primary">
               Enregistrer
             </button>
+          </div>
           </div>
         </form>
       </div>
