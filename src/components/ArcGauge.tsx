@@ -4,9 +4,9 @@ interface ArcGaugeProps {
 }
 
 const COLORS = {
-  healthy: '#34d399',
-  warning: '#fbbf24',
-  critical: '#f87171',
+  healthy: 'var(--green)',
+  warning: 'var(--amber)',
+  critical: 'var(--red)',
 } as const;
 
 export default function ArcGauge({ pct, color }: ArcGaugeProps) {
@@ -30,7 +30,7 @@ export default function ArcGauge({ pct, color }: ArcGaugeProps) {
     <svg viewBox="0 0 100 100" width="90" height="90" className="arc-gauge">
       <path
         d={trackPath}
-        stroke="rgba(255,255,255,0.07)"
+        stroke="var(--border-subtle)"
         strokeWidth="7"
         fill="none"
         strokeLinecap="round"
@@ -42,7 +42,6 @@ export default function ArcGauge({ pct, color }: ArcGaugeProps) {
           strokeWidth="7"
           fill="none"
           strokeLinecap="round"
-          style={{ filter: `drop-shadow(0 0 6px ${stroke}88)` }}
         />
       )}
       <text

@@ -3,6 +3,7 @@ import { useLayoutActions } from '../context/LayoutContext';
 import { usePrevision } from '../context/PrevisionContext';
 import DashboardCards, { ProchainAchatCTA } from '../components/DashboardCards';
 import DashboardAnalytics from '../components/DashboardAnalytics';
+import DashboardAlerts, { type DashboardAlert } from '../components/DashboardAlerts';
 import SoldeChart from '../components/SoldeChart';
 import ConsommationChart from '../components/ConsommationChart';
 import KwhMoisChart from '../components/KwhMoisChart';
@@ -53,7 +54,6 @@ export default function Dashboard() {
     : 0;
 
   const conseil = getConseilContextuel(data, prevision);
-  const periodeGraphiques = settings.periodeGraphiques ?? '30';
 
   const currentMonthKey = (() => {
     const now = new Date();
@@ -61,57 +61,104 @@ export default function Dashboard() {
   })();
   const noteDuMois = settings.evenementsParMois?.[currentMonthKey];
 
-  return (
-    <div className="dashboard">
-      {!hasReleves && (
-        <div className="cta-banner" role="status">
-          <div className="cta-text">
-            <strong>Commencez ici —</strong> ajoutez votre premier relevé de compteur pour activer le tableau de bord.
-          </div>
+  const dashboardAlerts: DashboardAlert[] = [];
+
+  if (showAlert) {
+    dashboardAlerts.push({
+      id: 'credit',
+      kind: 'critical',
+      priority: 1,
+      message: (
+        <>
+          Votre crédit sera épuisé dans {joursRestants ?? 0} jour
+          {(joursRestants ?? 0) !== 1 ? 's' : ''}. Pensez à recharger à temps.
+        </>
+      ),
+    });
+  }
+  if (showAnomalieAlert && anomalie) {
+    dashboardAlerts.push({
+      id: 'anomalie',
+      kind: 'warning',
+      priority: 2,
+      message: (
+        <>
+          Cette semaine votre conso. est d'environ {anomalie.tauxSemaine} kWh/j vs une moyenne de{' '}
+          {anomalie.tauxMoyen} kWh/j : vérifiez un appareil ou une fuite.
+        </>
+      ),
+    });
+  }
+  if (showBudgetAlert) {
+    dashboardAlerts.push({
+      id: 'budget',
+      kind: 'warning',
+      priority: 3,
+      message: (
+        <>
+          Au rythme actuel vous dépasserez votre objectif de {depassementAr.toLocaleString('fr-FR')} Ar
+          ce mois.
+        </>
+      ),
+    });
+  }
+  if (hasReleves && messagePrevision) {
+    dashboardAlerts.push({
+      id: 'prevision',
+      kind: 'warning',
+      priority: 4,
+      message: messagePrevision,
+    });
+  }
+  if (conseil) {
+    dashboardAlerts.push({
+      id: 'conseil',
+      kind: 'info',
+      priority: 5,
+      message: conseil,
+    });
+  }
+  if (noteDuMois) {
+    dashboardAlerts.push({
+      id: 'note',
+      kind: 'info',
+      priority: 6,
+      message: (
+        <>
+          <strong>Note du mois :</strong> {noteDuMois}
+        </>
+      ),
+    });
+  }
+
+  if (!hasReleves) {
+    return (
+      <div className="dashboard">
+        <div className="dashboard-empty" role="status">
+          <h2 className="dashboard-empty-title">Bienvenue sur ElecTracker</h2>
+          <p className="dashboard-empty-text">
+            Saisissez votre premier relevé de compteur pour afficher votre solde, vos graphiques et
+            vos estimations de consommation.
+          </p>
           <button
             type="button"
             className="btn btn-primary"
             onClick={() => layoutActions?.openReleve()}
           >
-            + Relevé
+            + Premier relevé
           </button>
         </div>
-      )}
-      {hasReleves && messagePrevision && (
-        <div className="alert-banner alert-warning" role="status">
-          {messagePrevision}
-        </div>
-      )}
-      {showAlert && (
-        <div className="alert-banner" role="alert">
-          Votre crédit sera épuisé dans {joursRestants ?? 0} jour{(joursRestants ?? 0) !== 1 ? 's' : ''}.
-          Pensez à recharger à temps.
-        </div>
-      )}
-      {showAnomalieAlert && anomalie && (
-        <div className="alert-banner alert-warning" role="alert">
-          Cette semaine votre conso. est d'environ {anomalie.tauxSemaine} kWh/j vs une moyenne de {anomalie.tauxMoyen} kWh/j — vérifiez un appareil ou une fuite.
-        </div>
-      )}
-      {showBudgetAlert && (
-        <div className="alert-banner alert-warning" role="alert">
-          Au rythme actuel vous dépasserez votre objectif de {depassementAr.toLocaleString('fr-FR')} Ar ce mois.
-        </div>
-      )}
-      {conseil && (
-        <div className="alert-banner alert-info" role="status">
-          {conseil}
-        </div>
-      )}
-      {noteDuMois && (
-        <div className="alert-banner alert-info" role="status">
-          <strong>Note du mois :</strong> {noteDuMois}
-        </div>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="dashboard">
+      <DashboardAlerts alerts={dashboardAlerts} />
       <DashboardCards data={data} />
       <div className="grid-2">
-        <SoldeChart releves={releves} periodeJours={periodeGraphiques === 'tout' ? undefined : parseInt(periodeGraphiques, 10)} />
-        <ConsommationChart releves={releves} periodeJours={periodeGraphiques === 'tout' ? undefined : parseInt(periodeGraphiques, 10)} />
+        <SoldeChart releves={releves} />
+        <ConsommationChart releves={releves} />
       </div>
       <KwhMoisChart data={data} />
       <ProchainAchatCTA data={data} />

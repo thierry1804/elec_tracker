@@ -87,9 +87,7 @@ export default function Layout() {
               <span className="badge-prepaye badge-prepaye-full">PRÉPAYÉ</span>
               <span className="badge-prepaye badge-prepaye-short" aria-label="Prépayé">P</span>
               {compteurActif && (
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginLeft: '0.35rem' }}>
-                  ({compteurActif.nom})
-                </span>
+                <span className="compteur-name">({compteurActif.nom})</span>
               )}
             </div>
             <time className="date" dateTime={new Date().toISOString()}>
@@ -99,30 +97,27 @@ export default function Layout() {
           <div className="header-actions header-actions-desk">
             <button
               type="button"
-              className="btn btn-icon"
+              className="btn btn-secondary btn-labeled"
               onClick={() => setShowSettings(true)}
-              title="Paramètres (prévision IA)"
-              aria-label="Paramètres"
             >
               <IconSettings />
+              <span>Paramètres</span>
             </button>
             <button
               type="button"
-              className="btn btn-secondary btn-icon"
+              className="btn btn-secondary btn-labeled"
               onClick={() => setShowReleve(true)}
-              title="Nouveau relevé"
-              aria-label="Nouveau relevé"
             >
               <IconReleve />
+              <span>Relevé</span>
             </button>
             <button
               type="button"
-              className="btn btn-primary btn-icon"
+              className="btn btn-primary btn-labeled"
               onClick={() => setShowAchat(true)}
-              title="Nouvel achat"
-              aria-label="Nouvel achat"
             >
               <IconAchat />
+              <span>Achat</span>
             </button>
           </div>
           <div className="header-menu-wrap" ref={menuRef}>

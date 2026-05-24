@@ -8,47 +8,32 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  ReferenceLine,
+  ReferenceArea,
 } from 'recharts';
-import type { TooltipProps } from 'recharts';
 import { getDonneesGraphiqueSolde } from '../lib/calculs';
 import type { Releve } from '../types';
 import { usePrevision } from '../context/PrevisionContext';
+import ChartShell, { useChartPeriodeJours } from './ChartShell';
+import { ChartTooltipContent } from './ChartTooltip';
+import {
+  CHART_HEIGHT,
+  CHART_MARGIN_WITH_RIGHT_LABEL,
+  GRID_PROPS,
+  LEGEND_STYLE,
+  TOOLTIP_STYLE,
+  SERIE_REAL,
+  SERIE_FORECAST,
+  SERIE_BAND,
+  SERIE_BAND_STROKE,
+  formatDateLong,
+  yAxisKwhProps,
+  xAxisDateProps,
+} from '../lib/chartTheme';
 import './Charts.css';
-
-const TOOLTIP_HIDDEN_KEYS = ['previsionMin', 'bandHeight'];
-
-function SoldeTooltipContent({ active, payload, label }: TooltipProps<number, string>) {
-  if (!active || !payload?.length) return null;
-  const filtered = payload.filter((p) => p.dataKey && !TOOLTIP_HIDDEN_KEYS.includes(String(p.dataKey)));
-  if (filtered.length === 0) return null;
-  const labelNames: Record<string, string> = {
-    solde: 'Solde',
-    prevision: 'Prévision',
-    intervalle: 'Intervalle de confiance',
-  };
-  return (
-    <div className="chart-tooltip">
-      <div className="chart-tooltip-label">
-        {label && new Date(label).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-      </div>
-      {filtered.map((entry) => {
-        const name = labelNames[String(entry.dataKey)] ?? String(entry.dataKey);
-        const value = entry.value;
-        if (value == null || (typeof value === 'number' && Number.isNaN(value))) return null;
-        return (
-          <div key={String(entry.dataKey)} className="chart-tooltip-item" style={{ color: entry.color }}>
-            {name}: {typeof value === 'number' ? value.toFixed(2) : value} kWh
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 interface SoldeChartProps {
   releves: Releve[];
-  /** Limiter aux N derniers jours (optionnel). */
-  periodeJours?: number;
 }
 
 interface ChartPoint {
@@ -61,35 +46,53 @@ interface ChartPoint {
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const TOOLTIP_HIDDEN = ['previsionMin', 'bandHeight', 'intervalle'];
 
-export default function SoldeChart({ releves, periodeJours }: SoldeChartProps) {
+function parseReleveDayMs(dateStr: string): number {
+  const d = dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00`;
+  return new Date(d).getTime();
+}
+
+export default function SoldeChart({ releves }: SoldeChartProps) {
+  const periodeJours = useChartPeriodeJours();
   let actualData = getDonneesGraphiqueSolde(releves);
   if (periodeJours != null && periodeJours > 0) {
     const limit = Date.now() - periodeJours * MS_PER_DAY;
-    actualData = actualData.filter((p) => new Date(p.date).getTime() >= limit);
+    actualData = actualData.filter((p) => parseReleveDayMs(p.date) >= limit);
   }
   const prevision = usePrevision();
   const forecastWithInterval =
-    prevision.donneesPrevision.length > 0
-      ? prevision.donneesPrevision
-      : [];
+    prevision.donneesPrevision.length > 0 ? prevision.donneesPrevision : [];
 
   if (actualData.length === 0) {
     return (
       <div className="chart-container">
         <div className="chart-header">
-          <span className="chart-title">Évolution du solde (kWh)</span>
+          <h3 className="chart-title">Évolution du solde</h3>
         </div>
         <div className="chart-empty">
-          <div className="chart-empty-icon">📈</div>
-          <div className="chart-empty-text">Ajoutez des relevés pour voir l'évolution</div>
+          <p className="chart-empty-text">Ajoutez des relevés pour voir l'évolution</p>
         </div>
       </div>
     );
   }
 
-  const formatDate = (s: string) =>
-    new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+  const lastActual = actualData[actualData.length - 1];
+  const firstActual = actualData[0];
+  const delta =
+    actualData.length >= 2 ? lastActual.solde - firstActual.solde : null;
+  const deltaStr =
+    delta != null
+      ? `${delta >= 0 ? '+' : ''}${delta.toFixed(1).replace('.', ',')} kWh sur la période`
+      : null;
+
+  const summary = (
+    <>
+      Dernier solde :{' '}
+      <strong className="mono">{lastActual.solde.toFixed(1).replace('.', ',')} kWh</strong>
+      {deltaStr && <> · {deltaStr}</>}
+    </>
+  );
 
   const dataWithPrevision: ChartPoint[] = actualData.map((p, i) => ({
     date: p.date,
@@ -99,6 +102,7 @@ export default function SoldeChart({ releves, periodeJours }: SoldeChartProps) {
     previsionMax: 0,
     bandHeight: 0,
   }));
+
   forecastWithInterval.forEach(({ date, solde, soldeMin, soldeMax }) => {
     dataWithPrevision.push({
       date,
@@ -108,38 +112,97 @@ export default function SoldeChart({ releves, periodeJours }: SoldeChartProps) {
       bandHeight: Math.max(0, soldeMax - soldeMin),
     });
   });
+
   const hasBand = forecastWithInterval.some((r) => r.soldeMax - r.soldeMin > 0.5);
+  const hasForecast = forecastWithInterval.length > 0;
+  const lastReleveDate = lastActual.date;
+  const forecastEndDate = hasForecast
+    ? forecastWithInterval[forecastWithInterval.length - 1].date
+    : null;
+
+  const tableRows = [
+    ...actualData.map((p) => ({
+      date: formatDateLong(p.date),
+      solde: `${p.solde.toFixed(2).replace('.', ',')} kWh`,
+      type: 'Relevé',
+    })),
+    ...forecastWithInterval.slice(0, 14).map((p) => ({
+      date: formatDateLong(p.date),
+      solde: `${p.solde.toFixed(2).replace('.', ',')} kWh`,
+      type: 'Prévision',
+    })),
+  ].slice(-20);
 
   return (
-    <div className="chart-container">
-      <div className="chart-header">
-        <span className="chart-title">Évolution du solde (kWh)</span>
-      </div>
-      <ResponsiveContainer width="100%" height={280}>
-        <ComposedChart data={dataWithPrevision} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-          <XAxis
-            dataKey="date"
-            tickFormatter={formatDate}
-            stroke="var(--text-secondary)"
-            fontSize={12}
-          />
-          <YAxis stroke="var(--text-secondary)" fontSize={12} />
+    <ChartShell
+      title="Évolution du solde"
+      summary={summary}
+      showPeriod
+      ariaSummary={`Solde électrique, dernier relevé ${lastActual.solde.toFixed(1)} kilowattheures`}
+      tableColumns={[
+        { key: 'date', header: 'Date' },
+        { key: 'solde', header: 'Solde', align: 'right' },
+        { key: 'type', header: 'Type' },
+      ]}
+      tableRows={tableRows}
+    >
+      <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+        <ComposedChart data={dataWithPrevision} margin={CHART_MARGIN_WITH_RIGHT_LABEL}>
+          <CartesianGrid {...GRID_PROPS} />
+          <XAxis dataKey="date" {...xAxisDateProps(dataWithPrevision.length)} />
+          <YAxis {...yAxisKwhProps()} />
           <Tooltip
-            content={<SoldeTooltipContent />}
-            contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text)' }}
-          />
-          <Legend
-            wrapperStyle={{ color: 'var(--text)' }}
-            formatter={(value) =>
-              value === 'solde'
-                ? 'Solde réel'
-                : value === 'prevision'
-                  ? 'Prévision (pondérée + tendance)'
-                  : value === 'intervalle'
-                    ? 'Intervalle de confiance'
-                    : value
+            content={
+              <ChartTooltipContent
+                hiddenKeys={TOOLTIP_HIDDEN}
+                labelFormatter={(l) => formatDateLong(l)}
+                rowFormatter={(key, val) => {
+                  const labels: Record<string, string> = {
+                    solde: 'Solde réel',
+                    prevision: 'Prévision',
+                  };
+                  return {
+                    label: labels[key] ?? key,
+                    value: `${val.toFixed(2).replace('.', ',')} kWh`,
+                    color: key === 'solde' ? SERIE_REAL : SERIE_FORECAST,
+                  };
+                }}
+              />
             }
+            contentStyle={TOOLTIP_STYLE}
+          />
+          {(hasForecast || hasBand) && (
+            <Legend
+              {...LEGEND_STYLE}
+              formatter={(value) =>
+                value === 'solde'
+                  ? 'Réel'
+                  : value === 'prevision'
+                    ? 'Prévision'
+                    : value === 'intervalle'
+                      ? 'Fourchette'
+                      : value
+              }
+            />
+          )}
+          {hasForecast && forecastEndDate && (
+            <ReferenceArea
+              x1={lastReleveDate}
+              x2={forecastEndDate}
+              fill="oklch(from var(--amber) l c h / 0.06)"
+              strokeOpacity={0}
+            />
+          )}
+          <ReferenceLine
+            x={lastReleveDate}
+            stroke="var(--border)"
+            strokeDasharray="4 4"
+            label={{
+              value: 'Dernier relevé',
+              position: 'insideTopLeft',
+              fill: 'var(--muted)',
+              fontSize: 10,
+            }}
           />
           {hasBand && (
             <>
@@ -147,7 +210,7 @@ export default function SoldeChart({ releves, periodeJours }: SoldeChartProps) {
                 type="monotone"
                 dataKey="previsionMin"
                 stackId="band"
-                fill="var(--bg-dark)"
+                fill="var(--bg)"
                 stroke="none"
                 legendType="none"
               />
@@ -155,18 +218,18 @@ export default function SoldeChart({ releves, periodeJours }: SoldeChartProps) {
                 type="monotone"
                 dataKey="bandHeight"
                 stackId="band"
-                fill="rgba(210, 153, 34, 0.35)"
+                fill={SERIE_BAND}
                 stroke="none"
                 name="intervalle"
               />
               <Line
                 type="monotone"
                 dataKey="previsionMin"
-                stroke="rgba(210, 153, 34, 0.85)"
-                strokeWidth={1.5}
+                stroke={SERIE_BAND_STROKE}
+                strokeWidth={1}
                 strokeDasharray="4 4"
                 dot={false}
-                connectNulls={true}
+                connectNulls
                 legendType="none"
               />
             </>
@@ -175,23 +238,26 @@ export default function SoldeChart({ releves, periodeJours }: SoldeChartProps) {
             type="monotone"
             dataKey="solde"
             name="solde"
-            stroke="var(--accent-blue)"
+            stroke={SERIE_REAL}
             strokeWidth={2}
-            dot={false}
+            dot={{ r: 3, fill: SERIE_REAL, strokeWidth: 0 }}
+            activeDot={{ r: 5, fill: SERIE_REAL }}
             connectNulls={false}
           />
-          <Line
-            type="monotone"
-            dataKey="prevision"
-            name="prevision"
-            stroke="var(--accent-orange)"
-            strokeWidth={2}
-            strokeDasharray="5 5"
-            dot={false}
-            connectNulls={true}
-          />
+          {hasForecast && (
+            <Line
+              type="monotone"
+              dataKey="prevision"
+              name="prevision"
+              stroke={SERIE_FORECAST}
+              strokeWidth={2}
+              strokeDasharray="6 4"
+              dot={false}
+              connectNulls
+            />
+          )}
         </ComposedChart>
       </ResponsiveContainer>
-    </div>
+    </ChartShell>
   );
 }

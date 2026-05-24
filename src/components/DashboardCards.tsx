@@ -120,7 +120,7 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
       <div className="hero-card">
         <div className="hero-top">
           <div>
-            <div className="hero-label">CRÉDIT RESTANT</div>
+            <div className="hero-label">Crédit restant</div>
             <div
               className={`hero-value ${isEmpty ? 'empty' : creditStatus}`}
             >
@@ -128,18 +128,18 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
               {!isEmpty && <span className="hero-unit">kWh</span>}
             </div>
             {isEmpty ? (
-              <div className="hero-sub" style={{ marginTop: 10 }}>
+              <div className="hero-sub">
                 Ajoutez un relevé pour voir votre solde
               </div>
             ) : (
-              <div className="hero-sub" style={{ marginTop: 10 }}>
+              <div className="hero-sub">
                 {joursRestants != null && joursRestants > 0 ? (
                   <>Prochaine recharge suggérée dans <span>{joursRestants} jour{joursRestants !== 1 ? 's' : ''}</span></>
                 ) : (
                   <>Solde au {dateDernierReleve && formatDate(dateDernierReleve)}</>
                 )}
                 {achatDebug && (
-                  <div style={{ marginTop: 6, fontSize: 12, color: 'var(--muted)' }}>
+                  <div className="hero-debug">
                     Dernier achat: +{achatDebug.lastAchat.creditKwh.toFixed(2)} kWh · base:{' '}
                     {achatDebug.baseReleve ? `${achatDebug.baseReleve.creditRestantKwh.toFixed(2)} kWh` : '—'} ·
                     attendu: {achatDebug.creditAttendu.toFixed(2)} kWh · actuel: {creditRestant.toFixed(2)} kWh
@@ -166,17 +166,9 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
           />
         </div>
         {!isEmpty && (
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginTop: 6,
-            }}
-          >
-            <span style={{ fontSize: 11, color: 'var(--muted)' }}>0 kWh</span>
-            <span style={{ fontSize: 11, color: 'var(--muted)' }}>
-              {Math.round(maxCredit)} kWh max
-            </span>
+          <div className="progress-labels">
+            <span>0 kWh</span>
+            <span>{Math.round(maxCredit)} kWh max</span>
           </div>
         )}
       </div>
@@ -184,36 +176,28 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
       {/* Stats grid */}
       <div className="grid-4">
         <div className="stat-card">
-          <div className="stat-icon icon-blue">📅</div>
           <div className="stat-label">Jours restants</div>
           {isEmpty ? (
             <div className="stat-empty">—</div>
           ) : (
-            <div
-              className="stat-value mono"
-              style={{ color: 'var(--blue)' }}
-            >
+            <div className="stat-value stat-value--accent">
               {joursRestants !== null ? joursRestants : '—'}
             </div>
           )}
           <div className="stat-sub">Estimation au rythme actuel</div>
         </div>
 
-        <div className="stat-card accent-blue">
-          <div className="stat-icon icon-green">⚡</div>
+        <div className="stat-card">
           <div className="stat-label">Conso. / jour</div>
           {isEmpty ? (
             <div className="stat-empty">—</div>
           ) : (
-            <div
-              className="stat-value mono"
-              style={{ color: 'var(--green)' }}
-            >
+            <div className="stat-value stat-value--green">
               {tauxJournalier != null
                 ? tauxJournalier.toFixed(2)
                 : '—'}
               {tauxJournalier != null && (
-                <span style={{ fontSize: 13, color: 'var(--muted)' }}> kWh</span>
+                <span className="stat-unit"> kWh</span>
               )}
             </div>
           )}
@@ -221,30 +205,20 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
             Moy. pondérée 7j / 30j
             {previsionLoading && <span> (IA…)</span>}
             {!previsionLoading && previsionPeuFiable && tauxJournalier != null && (
-              <span className="stat-sub-warning">
-                {' '}
-                — peu fiable
-              </span>
+              <span className="stat-sub-warning"> — peu fiable</span>
             )}
           </div>
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon icon-amber">💰</div>
           <div className="stat-label">Prix moyen</div>
           {isEmpty ? (
             <div className="stat-empty">—</div>
           ) : (
-            <div
-              className="stat-value mono"
-              style={{ color: 'var(--amber)' }}
-            >
+            <div className="stat-value stat-value--amber">
               {prixMoyen != null ? prixMoyen.toFixed(2).replace('.', ',') : '—'}
               {prixMoyen != null && (
-                <span style={{ fontSize: 13, color: 'var(--muted)' }}>
-                  {' '}
-                  Ar/kWh
-                </span>
+                <span className="stat-unit"> Ar/kWh</span>
               )}
             </div>
           )}
@@ -252,25 +226,18 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon icon-purple">📊</div>
           <div className="stat-label">Coût mensuel est.</div>
           {isEmpty ? (
             <div className="stat-empty">—</div>
           ) : (
-            <div
-              className="stat-value mono"
-              style={{ color: '#a78bfa' }}
-            >
+            <div className="stat-value">
               {coutMensuel != null
                 ? coutMensuel >= 1000
                   ? `${(coutMensuel / 1000).toFixed(2)}k`
                   : coutMensuel.toFixed(2).replace('.', ',')
                 : '—'}
               {coutMensuel != null && (
-                <span style={{ fontSize: 13, color: 'var(--muted)' }}>
-                  {' '}
-                  Ar
-                </span>
+                <span className="stat-unit"> Ar</span>
               )}
             </div>
           )}
@@ -335,7 +302,7 @@ export function ProchainAchatCTA({ data }: { data: AppData }) {
   return (
     <div className="cta-prochain-achat">
       <div>
-        <div className="cta-label">⚡ Prochain achat suggéré</div>
+        <div className="cta-label">Prochain achat suggéré</div>
         {isEmpty ? (
           <div className="cta-sub">
             En attente de données de consommation…

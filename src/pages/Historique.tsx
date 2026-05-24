@@ -7,9 +7,10 @@ import {
 } from '../lib/calculs';
 import type { ConsoEntreReleves } from '../lib/calculs';
 import ReleveForm from '../components/ReleveForm';
+import DeleteConfirmButton from '../components/DeleteConfirmButton';
 
 const IconEdit = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
   </svg>
@@ -25,7 +26,7 @@ export default function Historique() {
     : null;
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Supprimer ce relevé ?')) deleteReleve(id);
+    deleteReleve(id);
   };
 
   const formatDateHeure = (d: string) => {
@@ -47,8 +48,6 @@ export default function Historique() {
       ? `${(nbJours * 24).toFixed(1).replace('.', ',')} h`
       : `${Number.isInteger(nbJours) ? nbJours : nbJours.toFixed(1).replace('.', ',')} j`;
 
-  const muted = { color: 'var(--muted)', fontSize: '0.92em' } as const;
-
   /** Hausse de solde : l’app affiche la différence entre deux lectures, pas le kWh saisi dans « Achat ». */
   function ligneRechargement(conso: ConsoEntreReleves) {
     const deltaReleves = Math.abs(conso.kwhConsommes);
@@ -68,7 +67,7 @@ export default function Historique() {
       return (
         <>
           Hausse du solde +{dStr} kWh{' '}
-          <span style={muted}>
+          <span className="table-cell-muted">
             ({ap} − {av} : écart entre les deux lectures, distinct du montant éventuel sur la fiche achat)
           </span>{' '}
           <span style={{ whiteSpace: 'nowrap' }}>({sur})</span>
@@ -84,15 +83,15 @@ export default function Historique() {
     if (Math.abs(ecart) < 0.06) {
       return (
         <>
-          Rechargement +{dStr} kWh ({sur}) <span style={muted}>— cohérent avec {lblAchat}</span>
+          Rechargement +{dStr} kWh ({sur}) <span className="table-cell-muted">— cohérent avec {lblAchat}</span>
         </>
       );
     }
 
     return (
       <>
-        Hausse compteur +{dStr} kWh ({sur}) · <span style={muted}>achat enregistré {lblAchat}</span>
-        <span style={muted}>
+        Hausse compteur +{dStr} kWh ({sur}) · <span className="table-cell-muted">achat enregistré {lblAchat}</span>
+        <span className="table-cell-muted">
           {' '}
           — écart relevés − achat : {ecart > 0 ? '+' : ''}
           {ecart.toFixed(2).replace('.', ',')} kWh
@@ -129,7 +128,7 @@ export default function Historique() {
               return (
                 <tr key={releve.id}>
                   <td>{formatDateHeure(releve.date)}</td>
-                  <td>{releve.creditRestantKwh}</td>
+                  <td className="mono">{releve.creditRestantKwh}</td>
                   <td>
                     {conso != null
                       ? conso.kwhConsommes >= 0
@@ -148,15 +147,13 @@ export default function Historique() {
                       >
                         <IconEdit />
                       </button>
-                      <button
-                        type="button"
-                        className="btn-delete btn-delete-icon"
-                        onClick={() => handleDelete(releve.id)}
-                        title="Supprimer ce relevé"
-                        aria-label="Supprimer ce relevé"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                      </button>
+                      <DeleteConfirmButton
+                        itemLabel="ce relevé"
+                        onConfirm={() => handleDelete(releve.id)}
+                        icon={
+                          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                        }
+                      />
                     </div>
                   </td>
                 </tr>
