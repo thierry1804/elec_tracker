@@ -3,6 +3,7 @@ import { getRelevesTries } from './calculs';
 import { getPrixMoyenArPerKwh, getCoutMensuelEstime } from './calculs';
 import { getTauxJournalierPondere } from './calculs';
 import { loadSettings } from './storage';
+import type { ReportSynthesisResult } from './ai/parseResponse';
 import {
   getResumeHebdoEtMensuel,
   getComparaisonCeMoisVsDernier,
@@ -39,7 +40,10 @@ function formatAr(ar: number): string {
 /**
  * Génère un rapport HTML de synthèse (solde, dernier relevé, dernier achat, conso moyenne, coût mensuel, objectif) + insights + tableaux.
  */
-export function generateReportHtml(data: AppData): string {
+export function generateReportHtml(
+  data: AppData,
+  aiSynthesis?: ReportSynthesisResult | null
+): string {
   const { releves, achats } = data;
   const tries = getRelevesTries(releves);
   const dernierReleve = tries[tries.length - 1];
@@ -144,6 +148,12 @@ export function generateReportHtml(data: AppData): string {
     ? `<h2>Insights</h2><ul>${insightsLines.join('')}</ul>`
     : '';
 
+  const aiSection = aiSynthesis
+    ? `<h2>Synthèse assistant local</h2>
+  <p>${escapeHtml(aiSynthesis.synthese)}</p>
+  ${aiSynthesis.pointsClefs.length > 0 ? `<ul>${aiSynthesis.pointsClefs.map((p) => `<li>${escapeHtml(p)}</li>`).join('')}</ul>` : ''}`
+    : '';
+
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -172,6 +182,7 @@ export function generateReportHtml(data: AppData): string {
   <p><strong>kWh/mois estimé :</strong> ${kwhMoisEstime != null ? kwhMoisEstime + ' kWh' : '—'}</p>
   ${objectifLine}
   ${noteHtml}
+  ${aiSection}
   ${insightsSection}
   <h2>Derniers relevés</h2>
   <table><thead><tr><th>Date</th><th>Crédit restant (kWh)</th></tr></thead><tbody>${rowsReleves || '<tr><td colspan="2">Aucun relevé</td></tr>'}</tbody></table>
@@ -181,8 +192,11 @@ export function generateReportHtml(data: AppData): string {
 </html>`;
 }
 
-export function downloadReportHtml(data: AppData): void {
-  const html = generateReportHtml(data);
+export function downloadReportHtml(
+  data: AppData,
+  aiSynthesis?: ReportSynthesisResult | null
+): void {
+  const html = generateReportHtml(data, aiSynthesis);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

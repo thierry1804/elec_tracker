@@ -1,5 +1,9 @@
-import { loadAiSettings, DEFAULT_BASE_URL, DEFAULT_MODEL } from '../../lib/aiSettings';
+import { useState } from 'react';
 import { useSettingsPage, formatLastSave, type SettingsTabId } from '../../hooks/useSettingsPage';
+import { useEmbeddedAi } from '../../context/EmbeddedAiContext';
+import { MODELS } from '../../lib/ai/models';
+import { buildFullAiContext } from '../../lib/ai/buildContext';
+import type { ModelTier } from '../../types';
 import { exportRelevesCSV, exportAchatsCSV } from '../../lib/csvExport';
 import { downloadReportHtml } from '../../lib/reportExport';
 import { downloadReportPdf } from '../../lib/pdfExport';
@@ -9,7 +13,7 @@ import { IconTrash } from '../nav/NavIcons';
 import '../Modal.css';
 import './Settings.css';
 
-const PLACEHOLDER_KEY = 'sk-...';
+const REPORT_TIMEOUT_MS = 35_000;
 
 const IconSun = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -114,17 +118,12 @@ export interface SettingsPageContentProps {
 }
 
 export default function SettingsPageContent({ activeTab }: SettingsPageContentProps) {
+  const embeddedAi = useEmbeddedAi();
+  const [reportLoading, setReportLoading] = useState<'html' | 'pdf' | null>(null);
   const {
     data,
     currentSettings,
     updateSettings,
-    apiKey,
-    setApiKey,
-    baseUrl,
-    setBaseUrl,
-    model,
-    setModel,
-    saved,
     lastSave,
     importPayload,
     importError,
@@ -141,7 +140,6 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
     periodeGraphiques,
     noteDuMois,
     fileInputRef,
-    hasKey,
     handleReminderToggle,
     handleReminderDaysChange,
     handleReminderByHabitChange,
@@ -158,19 +156,39 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
     handleImportReplace,
     handleImportMerge,
     handleImportCancel,
-    handleAiSubmit,
-    handleClearAi,
   } = useSettingsPage();
 
-  const resetAiFieldsToSaved = () => {
-    const s = loadAiSettings();
-    const nextKey = s?.apiKey ? '••••••••••••' : '';
-    const nextUrl = s?.baseUrl || DEFAULT_BASE_URL;
-    const nextModel = s?.model || DEFAULT_MODEL;
-    setApiKey(nextKey);
-    setBaseUrl(nextUrl);
-    setModel(nextModel);
+  const handleReportExport = async (format: 'html' | 'pdf') => {
+    setReportLoading(format);
+    try {
+      let synthesis = null;
+      if (embeddedAi.isReady) {
+        const context = buildFullAiContext(data, null);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), REPORT_TIMEOUT_MS);
+        try {
+          const result = await embeddedAi.runTask('report', context, controller.signal);
+          if (result?.task === 'report') synthesis = result.result;
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
+      if (format === 'html') {
+        downloadReportHtml(data, synthesis);
+      } else {
+        downloadReportPdf(data, synthesis);
+      }
+    } finally {
+      setReportLoading(null);
+    }
   };
+
+  const modelReady = embeddedAi.status === 'ready';
+  const modelDownloading = embeddedAi.status === 'downloading';
+  const isCheckingWebGpu = embeddedAi.status === 'checking';
+  const progressPct = embeddedAi.progress
+    ? Math.round(embeddedAi.progress.progress * 100)
+    : 0;
 
   return (
     <div
@@ -526,17 +544,19 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
               <button
                 type="button"
                 className="btn btn-secondary backup-btn backup-btn--icon"
-                onClick={() => downloadReportHtml(data)}
+                disabled={reportLoading !== null}
+                onClick={() => handleReportExport('html')}
                 title="Exporter le rapport (HTML)"
                 aria-label="Exporter le rapport HTML"
               >
                 <IconFileReport />
-                <span className="backup-btn-label">HTML</span>
+                <span className="backup-btn-label">{reportLoading === 'html' ? '…' : 'HTML'}</span>
               </button>
               <button
                 type="button"
                 className="btn btn-secondary backup-btn backup-btn--icon"
-                onClick={() => downloadReportPdf(data)}
+                disabled={reportLoading !== null}
+                onClick={() => handleReportExport('pdf')}
                 title="Exporter le rapport (PDF)"
                 aria-label="Exporter le rapport PDF"
               >
@@ -545,7 +565,7 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
                   <polyline points="14 2 14 8 20 8" />
                   <path d="M10 12h4M10 16h4M10 20h2" />
                 </svg>
-                <span className="backup-btn-label">PDF</span>
+                <span className="backup-btn-label">{reportLoading === 'pdf' ? '…' : 'PDF'}</span>
               </button>
               <button
                 type="button"
@@ -601,74 +621,111 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
         )}
 
         {activeTab === 'avance' && (
-          <section className="settings-section settings-card" aria-labelledby="prevision-heading">
-            <h3 id="prevision-heading" className="settings-card-title settings-card-title-with-icon">
+          <section className="settings-section settings-card" aria-labelledby="assistant-heading">
+            <h3 id="assistant-heading" className="settings-card-title settings-card-title-with-icon">
               <IconSparkles />
-              Prévision IA
+              Assistant local
             </h3>
-            <form onSubmit={handleAiSubmit}>
-              <p className="settings-hint settings-hint-inline">
-                Optionnel : clé API (OpenAI ou compatible) pour améliorer la prévision avec l’IA.
-                Sans clé, la prévision reste calculée localement comme aujourd’hui.
+            <p className="settings-hint settings-hint-inline">
+              Modèle embarqué dans le navigateur pour la prévision, l’analyse et les rapports.
+              Sans téléchargement, l’app utilise les calculs locaux.
+            </p>
+
+            {isCheckingWebGpu && (
+              <p className="settings-hint" role="status">
+                Vérification de la compatibilité avec cet appareil…
               </p>
+            )}
+
+            {!isCheckingWebGpu && embeddedAi.status === 'unsupported' && (
+              <p className="settings-hint settings-hint-warning" role="status">
+                {embeddedAi.webGpuReason ?? 'WebGPU non disponible sur cet appareil.'}
+                {' '}L’assistant local ne peut pas être installé ici ; les calculs locaux restent disponibles.
+              </p>
+            )}
+
+            {embeddedAi.isWebGpuSupported && (
               <div className="ai-settings-fields">
-                <div className="ai-field-row">
-                  <label htmlFor="settings-api-key">Clé API (token)</label>
+                <div className="ai-field-row ai-field-row-toggle">
+                  <label htmlFor="settings-ai-enabled">Activer l’assistant</label>
                   <input
-                    id="settings-api-key"
-                    type="password"
-                    autoComplete="off"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder={PLACEHOLDER_KEY}
+                    id="settings-ai-enabled"
+                    type="checkbox"
+                    checked={embeddedAi.settings.enabled}
+                    onChange={(e) => embeddedAi.setEnabled(e.target.checked)}
                   />
                 </div>
+
                 <div className="ai-field-row">
-                  <label htmlFor="settings-api-url">URL de l’API (optionnel)</label>
-                  <input
-                    id="settings-api-url"
-                    type="url"
-                    value={baseUrl}
-                    onChange={(e) => setBaseUrl(e.target.value)}
-                    placeholder={DEFAULT_BASE_URL}
-                  />
+                  <label htmlFor="settings-ai-model">Modèle</label>
+                  <select
+                    id="settings-ai-model"
+                    value={embeddedAi.settings.modelTier}
+                    disabled={modelDownloading || embeddedAi.status === 'inferring'}
+                    onChange={(e) => embeddedAi.setModelTier(e.target.value as ModelTier)}
+                  >
+                    {(Object.keys(MODELS) as ModelTier[]).map((tier) => (
+                      <option key={tier} value={tier}>
+                        {MODELS[tier].label} ({MODELS[tier].sizeLabel})
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div className="ai-field-row">
-                  <label htmlFor="settings-api-model">Modèle (optionnel)</label>
-                  <input
-                    id="settings-api-model"
-                    type="text"
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    placeholder={DEFAULT_MODEL}
-                  />
-                </div>
+
+                <p className="settings-hint">
+                  Premier téléchargement : {MODELS[embeddedAi.settings.modelTier].sizeLabel}. Wi‑Fi recommandé.
+                  Nécessite Chrome ou Edge récent avec accélération graphique.
+                </p>
+
+                {modelDownloading && embeddedAi.progress && (
+                  <div className="ai-download-progress" role="status">
+                    <progress max={100} value={progressPct} />
+                    <span className="settings-hint">
+                      Téléchargement du modèle… {progressPct} %
+                    </span>
+                  </div>
+                )}
+
+                {modelReady && (
+                  <p className="settings-hint" role="status">
+                    Modèle prêt
+                    {embeddedAi.settings.downloadedAt
+                      ? ` (téléchargé le ${formatLastSave(embeddedAi.settings.downloadedAt)})`
+                      : ''}
+                  </p>
+                )}
+
+                {embeddedAi.error && (
+                  <p className="settings-hint settings-hint-warning" role="alert">
+                    {embeddedAi.error}
+                  </p>
+                )}
               </div>
+            )}
+
+            {embeddedAi.isWebGpuSupported && (
               <div className="ai-actions">
-                {hasKey && (
+                {!modelReady && (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    disabled={modelDownloading}
+                    onClick={() => embeddedAi.downloadModel()}
+                  >
+                    {modelDownloading ? 'Téléchargement…' : 'Télécharger le modèle'}
+                  </button>
+                )}
+                {modelReady && (
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
-                    onClick={handleClearAi}
+                    onClick={() => embeddedAi.clearModel()}
                   >
-                    Désactiver l'IA
+                    Supprimer le modèle
                   </button>
                 )}
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => resetAiFieldsToSaved()}
-                >
-                  Réinitialiser
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary btn-sm"
-                >
-                  {saved ? 'Enregistré' : 'Enregistrer'}
-                </button>
               </div>
-            </form>
+            )}
           </section>
         )}
       </div>

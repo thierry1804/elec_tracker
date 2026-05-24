@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import type { AppData } from '../types';
 import { getRelevesTries, getPrixMoyenArPerKwh, getTauxJournalierPondere, getCoutMensuelEstime } from './calculs';
 import { loadSettings } from './storage';
+import type { ReportSynthesisResult } from './ai/parseResponse';
 
 function formatDate(d: string): string {
   return new Date(d).toLocaleDateString('fr-FR', {
@@ -12,7 +13,10 @@ function formatDate(d: string): string {
   });
 }
 
-export function downloadReportPdf(data: AppData): void {
+export function downloadReportPdf(
+  data: AppData,
+  aiSynthesis?: ReportSynthesisResult | null
+): void {
   const { releves, achats } = data;
   const tries = getRelevesTries(releves);
   const dernier = tries[tries.length - 1];
@@ -69,6 +73,24 @@ export function downloadReportPdf(data: AppData): void {
   for (const line of summaryLines) {
     doc.text(line, 14, y);
     y += 5.5;
+  }
+
+  if (aiSynthesis) {
+    y += 4;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Synthese assistant local', 14, y);
+    y += 6;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const syntheseLines = doc.splitTextToSize(aiSynthesis.synthese, 180);
+    doc.text(syntheseLines, 14, y);
+    y += syntheseLines.length * 5 + 2;
+    for (const point of aiSynthesis.pointsClefs) {
+      const pointLines = doc.splitTextToSize(`- ${point}`, 176);
+      doc.text(pointLines, 16, y);
+      y += pointLines.length * 5;
+    }
   }
 
   // Tableau des relevés

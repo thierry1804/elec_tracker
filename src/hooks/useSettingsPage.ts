@@ -1,11 +1,4 @@
-import { useState, useEffect, useRef, type FormEvent } from 'react';
-import {
-  loadAiSettings,
-  saveAiSettings,
-  clearAiSettings,
-  DEFAULT_BASE_URL,
-  DEFAULT_MODEL,
-} from '../lib/aiSettings';
+import { useState, useEffect, useRef } from 'react';
 import { getLastSaveTime } from '../lib/storage';
 import { useSettings } from '../context/SettingsContext';
 import {
@@ -26,9 +19,6 @@ export type SettingsTabId = 'general' | 'compteurs' | 'alertes' | 'donnees' | 'a
 export function useSettingsPage() {
   const { data, replaceData, mergeAndSetData } = useApp();
   const { settings: currentSettings, updateSettings } = useSettings();
-  const [apiKey, setApiKey] = useState('');
-  const [baseUrl, setBaseUrl] = useState(DEFAULT_BASE_URL);
-  const [model, setModel] = useState(DEFAULT_MODEL);
   const [saved, setSaved] = useState(false);
   const [lastSave, setLastSave] = useState<string | null>(() => getLastSaveTime());
   const [importPayload, setImportPayload] = useState<ExportPayload | null>(null);
@@ -70,15 +60,6 @@ export function useSettingsPage() {
     setPeriodeGraphiques(currentSettings.periodeGraphiques ?? '30');
     setNoteDuMois(currentSettings.evenementsParMois?.[currentMonthKey] ?? '');
   }, [currentMonthKey, currentSettings]);
-
-  useEffect(() => {
-    const s = loadAiSettings();
-    if (s) {
-      setApiKey(s.apiKey ? '••••••••••••' : '');
-      setBaseUrl(s.baseUrl || DEFAULT_BASE_URL);
-      setModel(s.model || DEFAULT_MODEL);
-    }
-  }, []);
 
   const handleReminderToggle = async (checked: boolean) => {
     if (checked) {
@@ -189,51 +170,12 @@ export function useSettingsPage() {
     setImportError(null);
   };
 
-  const handleAiSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    if (apiKey.trim() === '') {
-      clearAiSettings();
-      setApiKey('');
-      setBaseUrl(DEFAULT_BASE_URL);
-      setModel(DEFAULT_MODEL);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-      return;
-    }
-    const keyToSave = apiKey === '••••••••••••' ? loadAiSettings()?.apiKey : apiKey.trim();
-    if (keyToSave) {
-      saveAiSettings({
-        apiKey: keyToSave,
-        baseUrl: baseUrl.trim() || DEFAULT_BASE_URL,
-        model: model.trim() || DEFAULT_MODEL,
-      });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    }
-  };
-
-  const handleClearAi = () => {
-    clearAiSettings();
-    setApiKey('');
-    setBaseUrl(DEFAULT_BASE_URL);
-    setModel(DEFAULT_MODEL);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
-  const hasKey = !!loadAiSettings()?.apiKey;
-
   return {
     data,
     currentSettings,
     updateSettings,
-    apiKey,
-    setApiKey,
-    baseUrl,
-    setBaseUrl,
-    model,
-    setModel,
     saved,
+    setSaved,
     lastSave,
     importPayload,
     importError,
@@ -250,7 +192,6 @@ export function useSettingsPage() {
     periodeGraphiques,
     noteDuMois,
     fileInputRef,
-    hasKey,
     handleReminderToggle,
     handleReminderDaysChange,
     handleReminderByHabitChange,
@@ -267,8 +208,6 @@ export function useSettingsPage() {
     handleImportReplace,
     handleImportMerge,
     handleImportCancel,
-    handleAiSubmit,
-    handleClearAi,
   };
 }
 

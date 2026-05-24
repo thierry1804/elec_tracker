@@ -27,11 +27,14 @@ export interface Compteur {
 }
 
 
-/** Paramètres pour l’IA de prévision (clé API, modèle, etc.). */
-export interface AiSettings {
-  apiKey: string;
-  baseUrl?: string;
-  model?: string;
+export type ModelTier = 'light' | 'balanced';
+
+/** Paramètres pour l’assistant IA embarqué (WebLLM). */
+export interface EmbeddedAiSettings {
+  enabled: boolean;
+  modelTier: ModelTier;
+  /** ISO date du dernier téléchargement réussi du modèle actif. */
+  downloadedAt?: string;
 }
 
 /** Objectif / budget mensuel (optionnel). */

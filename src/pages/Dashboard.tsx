@@ -16,6 +16,7 @@ import {
 } from '../lib/calculs';
 import { getAnomalieConsommation } from '../lib/analytics';
 import { getConseilContextuel } from '../lib/conseils';
+import { useAiInterpretation } from '../hooks/useAiInterpretation';
 import { useSettings } from '../context/SettingsContext';
 import CollapsibleSection from '../components/CollapsibleSection';
 import PageHeader from '../components/PageHeader';
@@ -56,6 +57,7 @@ export default function Dashboard() {
     : 0;
 
   const conseil = getConseilContextuel(data, prevision);
+  const aiInterpretation = useAiInterpretation(data, prevision);
 
   const currentMonthKey = (() => {
     const now = new Date();
@@ -115,12 +117,37 @@ export default function Dashboard() {
       message: messagePrevision,
     });
   }
-  if (conseil) {
+  if (aiInterpretation.result) {
+    dashboardAlerts.push({
+      id: 'analyse-ia',
+      kind: 'info',
+      priority: 5,
+      message: (
+        <>
+          <strong>Analyse :</strong> {aiInterpretation.result.interpretation}
+          {aiInterpretation.result.recommandations.length > 0 && (
+            <ul className="dashboard-alert-list">
+              {aiInterpretation.result.recommandations.map((rec) => (
+                <li key={rec}>{rec}</li>
+              ))}
+            </ul>
+          )}
+        </>
+      ),
+    });
+  } else if (conseil) {
     dashboardAlerts.push({
       id: 'conseil',
       kind: 'info',
       priority: 5,
       message: conseil,
+    });
+  } else if (aiInterpretation.loading) {
+    dashboardAlerts.push({
+      id: 'analyse-loading',
+      kind: 'info',
+      priority: 5,
+      message: 'Analyse locale en cours…',
     });
   }
   if (noteDuMois) {

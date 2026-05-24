@@ -19,7 +19,7 @@ Ouvrir http://localhost:5173
 
 - **Crédit restant** : affichage du solde en kWh avec jauge circulaire et barre de progression (niveaux vert / orange / rouge selon le niveau).
 - **Jours restants** : estimation du nombre de jours avant épuisement du crédit, au rythme de consommation actuel.
-- **Consommation journalière** : taux moyen en kWh/jour (moyenne pondérée sur 7 j, 30 j et global). Indication « IA » pendant le chargement si une clé API est configurée, et « peu fiable » si l’historique couvre moins de 3 jours.
+- **Consommation journalière** : taux moyen en kWh/jour (moyenne pondérée sur 7 j, 30 j et global). Indication « assistant local… » pendant le chargement si l’assistant embarqué est actif, et « peu fiable » si l’historique couvre moins de 3 jours.
 - **Prix moyen** : prix unitaire moyen en Ar/kWh sur l’ensemble des achats.
 - **Coût mensuel estimé** : coût en Ar pour 30 jours, basé sur la conso. journalière et le prix moyen.
 - **Prochain achat suggéré** : date et quantité en kWh suggérées (environ 3 jours avant épuisement), avec bouton « Acheter maintenant » ouvrant le formulaire d’achat.
@@ -44,10 +44,12 @@ Ouvrir http://localhost:5173
 - **Nouveau relevé** (bouton « + Relevé » dans l’en-tête) : date, heure et crédit restant (kWh). Modal avec sélecteur de date (fr).
 - **Nouvel achat** (bouton « + Achat ») : date, montant (Ar) et crédit (kWh) ; le prix unitaire Ar/kWh est calculé automatiquement.
 
-### Prévision et paramètres (IA optionnelle)
+### Assistant local embarqué (optionnel)
 
-- **Prévision locale** (par défaut) : taux journalier pondéré (7 j à 60 %, 30 j à 30 %, global à 10 %) pour estimer jours restants, date d’épuisement et prochain achat. Aucune clé API requise.
-- **Prévision IA** (optionnelle) : via **Paramètres** (icône engrenage), configuration d’une clé API (OpenAI ou compatible), URL de l’API et modèle. Si une clé est renseignée et qu’il y a au moins 2 relevés, l’appel à l’IA améliore l’estimation du taux journalier. Possibilité de désactiver l’IA pour revenir au calcul local.
+- **Calcul local** (par défaut) : taux journalier pondéré (7 j à 60 %, 30 j à 30 %, global à 10 %) pour estimer jours restants, date d’épuisement et prochain achat. Aucun téléchargement requis.
+- **Assistant local WebLLM** (optionnel) : dans **Paramètres → Avancé**, téléchargez un modèle embarqué (~300 Mo léger ou ~900 Mo équilibré). Une fois activé, il améliore la prévision, l’analyse du dashboard et la synthèse des rapports HTML/PDF.
+- **Prérequis** : Chrome ou Edge récent avec WebGPU. Premier téléchargement recommandé en Wi‑Fi. Les poids sont mis en cache (IndexedDB) : offline possible après le premier chargement.
+- **Fallback** : sans modèle ou si WebGPU est indisponible (ex. Safari iOS), l’app reste entièrement fonctionnelle avec les calculs et règles locales.
 
 ### Navigation et interface
 

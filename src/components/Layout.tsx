@@ -60,7 +60,7 @@ export default function Layout() {
   const dateShort = formatDateShort(today);
 
   return (
-    <PrevisionProvider releves={data.releves}>
+    <PrevisionProvider releves={data.releves} achats={data.achats}>
       <ReminderChecker />
       <LayoutActionsProvider value={layoutActions}>
         <div className="layout">

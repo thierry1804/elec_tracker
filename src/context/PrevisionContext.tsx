@@ -15,8 +15,8 @@ import {
   getKwhAchatSuggere,
   getDonneesPrevisionAvecIntervalleFromTaux,
 } from '../lib/calculs';
-import { loadAiSettings } from '../lib/aiSettings';
-import { fetchPrevisionTaux } from '../lib/aiPrevision';
+import { useEmbeddedAi } from './EmbeddedAiContext';
+import { buildFullAiContext } from '../lib/ai/buildContext';
 
 export interface PrevisionResult {
   tauxJournalier: number | null;
@@ -103,19 +103,21 @@ const PrevisionContext = createContext<PrevisionResult | null>(null);
 
 export function PrevisionProvider({
   releves,
+  achats,
   children,
 }: {
   releves: Releve[];
+  achats: { id: string; date: string; montantAr: number; creditKwh: number; prixUnitaireArPerKwh: number }[];
   children: React.ReactNode;
 }) {
+  const { isReady, runTask } = useEmbeddedAi();
   const fallback = useMemo(() => computeFallback(releves), [releves]);
   const [result, setResult] = useState<PrevisionResult>(fallback);
 
   useEffect(() => {
     const fallbackResult = computeFallback(releves);
-    const settings = loadAiSettings();
 
-    if (!settings?.apiKey || releves.length < 2) {
+    if (!isReady || releves.length < 2) {
       setResult({ ...fallbackResult, loading: false, error: null });
       return;
     }
@@ -124,12 +126,13 @@ export function PrevisionProvider({
 
     const controller = new AbortController();
     const { signal } = controller;
+    const context = buildFullAiContext({ releves, achats }, fallbackResult);
 
-    fetchPrevisionTaux(settings, releves, signal)
-      .then((taux) => {
+    runTask('prevision', context, signal)
+      .then((taskResult) => {
         if (signal.aborted) return;
-        if (taux != null && taux > 0) {
-          setResult(buildFromTaux(releves, taux, 'ai'));
+        if (taskResult?.task === 'prevision' && taskResult.tauxJournalier > 0) {
+          setResult(buildFromTaux(releves, taskResult.tauxJournalier, 'ai'));
         } else {
           setResult({ ...computeFallback(releves), loading: false, error: null });
         }
@@ -139,12 +142,12 @@ export function PrevisionProvider({
         setResult({
           ...computeFallback(releves),
           loading: false,
-          error: 'IA indisponible',
+          error: 'Assistant local indisponible',
         });
       });
 
     return () => controller.abort();
-  }, [releves]);
+  }, [releves, achats, isReady, runTask]);
 
   const value = useMemo(() => result, [result]);
 
