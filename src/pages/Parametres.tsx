@@ -19,8 +19,10 @@ export default function Parametres() {
   return (
     <div className="page parametres">
       <PageHeader title="Paramètres" lead={TAB_LEADS[activeTab]} />
-      <div className="page-stack settings-page">
-        <SettingsTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <div className="settings-shell">
+        <aside className="settings-sidebar">
+          <SettingsTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        </aside>
         <SettingsPageContent activeTab={activeTab} />
       </div>
     </div>

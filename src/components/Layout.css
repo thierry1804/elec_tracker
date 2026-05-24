@@ -2,7 +2,6 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow-x: hidden;
 }
 
 .layout-sticky {
@@ -199,6 +198,7 @@
   .layout {
     --mobile-nav-height: 2.875rem;
     --fab-size: 48px;
+    --layout-header-height: 72px;
   }
 }
 

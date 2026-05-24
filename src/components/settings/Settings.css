@@ -1,12 +1,8 @@
 /* ── Page Paramètres (alignée dashboard / graphiques) ── */
 
-.settings-page {
+.settings-shell {
   display: flex;
   flex-direction: column;
-  gap: 0;
-}
-
-.page-stack.settings-page {
   gap: 0;
 }
 
@@ -357,24 +353,32 @@
 /* ── Desktop : sidebar onglets ── */
 
 @media (min-width: 641px) {
-  .settings-page {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 1.5rem;
+  .settings-shell {
+    display: grid;
+    grid-template-columns: 9.5rem minmax(0, 1fr);
+    column-gap: 1.5rem;
+    align-items: start;
+  }
+
+  .settings-sidebar {
+    position: sticky;
+    top: calc(var(--layout-header-height) + 1.25rem);
+    align-self: start;
+    z-index: 1;
   }
 
   .settings-tabs {
     flex-direction: column;
     flex-wrap: nowrap;
+    flex-shrink: 0;
     overflow: visible;
     border-bottom: none;
     border-right: 1px solid var(--border);
     margin-bottom: 0;
     padding-right: 1rem;
-    min-width: 9.5rem;
-    position: sticky;
-    top: 0.5rem;
-    align-self: flex-start;
+    min-width: 0;
+    width: 100%;
+    background: var(--bg);
   }
 
   .settings-tab-btn {
@@ -399,6 +403,13 @@
 }
 
 @media (max-width: 640px) {
+  .settings-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bg);
+  }
+
   .parametres .settings-field-narrow,
   .parametres .settings-field-medium {
     max-width: none;
