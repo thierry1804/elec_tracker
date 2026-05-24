@@ -138,16 +138,16 @@ export default function Dashboard() {
 
   if (!hasReleves) {
     return (
-      <div className="dashboard">
+      <div className="page dashboard">
         <div className="dashboard-empty" role="status">
           <h2 className="dashboard-empty-title">Bienvenue sur ElecTracker</h2>
           <p className="dashboard-empty-text">
             Trois étapes pour suivre votre électricité prépayée :
           </p>
           <ol className="dashboard-empty-steps">
-            <li><strong>Relevé initial</strong> — notez le kWh restant sur le compteur</li>
-            <li><strong>Achat</strong> — enregistrez chaque recharge (montant + crédit)</li>
-            <li><strong>Relevés réguliers</strong> — mettez à jour le solde pour affiner les estimations</li>
+            <li><strong>Relevé initial</strong> : notez le kWh restant sur le compteur</li>
+            <li><strong>Achat</strong> : enregistrez chaque recharge (montant + crédit)</li>
+            <li><strong>Relevés réguliers</strong> : mettez à jour le solde pour affiner les estimations</li>
           </ol>
           <button
             type="button"

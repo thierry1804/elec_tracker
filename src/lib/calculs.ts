@@ -225,7 +225,7 @@ export function getMessageAvertissementPrevision(releves: Releve[]): string | nu
     return 'Prévision indisponible : aucun intervalle ≥ 6h entre relevés. Saisir des relevés à heures régulières (matin + soir) sur plusieurs jours.';
   }
   if (spanJours < JOURS_SEUIL_FIABILITE_PREVISION) {
-    return 'Prévision basée sur moins de 3 jours de données — peu fiable. Saisir des relevés à heures régulières (matin + soir) pendant 7 jours pour améliorer.';
+    return 'Prévision basée sur moins de 3 jours de données, peu fiable. Saisir des relevés à heures régulières (matin + soir) pendant 7 jours pour améliorer.';
   }
   return null;
 }

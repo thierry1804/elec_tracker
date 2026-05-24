@@ -5,14 +5,8 @@ import { useLayoutActions } from '../context/LayoutContext';
 import AchatForm from '../components/AchatForm';
 import DeleteConfirmButton from '../components/DeleteConfirmButton';
 import PrixAchatsChart from '../components/PrixAchatsChart';
+import { IconEdit, IconTrash } from '../components/nav/NavIcons';
 import '../components/Charts.css';
-
-const IconEdit = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-  </svg>
-);
 
 export default function Achats() {
   const { data, deleteAchat, restoreAchat } = useApp();
@@ -55,14 +49,16 @@ export default function Achats() {
 
   if (achats.length === 0) {
     return (
-      <div className="page-empty dashboard-empty">
-        <h2 className="dashboard-empty-title">Achats</h2>
-        <p className="dashboard-empty-text">
-          Aucun achat enregistré. Saisissez montant et crédit reçu à chaque recharge.
-        </p>
-        <button type="button" className="btn btn-primary" onClick={() => layoutActions?.openAchat()}>
-          + Premier achat
-        </button>
+      <div className="page achats">
+        <div className="page-empty dashboard-empty" role="status">
+          <h2 className="dashboard-empty-title">Achats</h2>
+          <p className="dashboard-empty-text">
+            Aucun achat enregistré. Saisissez montant et crédit reçu à chaque recharge.
+          </p>
+          <button type="button" className="btn btn-primary" onClick={() => layoutActions?.openAchat()}>
+            + Premier achat
+          </button>
+        </div>
       </div>
     );
   }
@@ -115,15 +111,13 @@ export default function Achats() {
                     >
                       <IconEdit />
                     </button>
-                      <DeleteConfirmButton
-                        itemLabel="cet achat"
-                        onConfirm={() => deleteAchat(a.id)}
-                        onUndo={() => restoreAchat(a)}
-                        undoMessage="Achat supprimé"
-                        icon={
-                          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                        }
-                      />
+                    <DeleteConfirmButton
+                      itemLabel="cet achat"
+                      onConfirm={() => deleteAchat(a.id)}
+                      onUndo={() => restoreAchat(a)}
+                      undoMessage="Achat supprimé"
+                      icon={<IconTrash />}
+                    />
                   </div>
                 </td>
               </tr>

@@ -87,6 +87,13 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal {
+    animation: none;
+  }
+}
+
 .modal-header {
   display: flex;
   align-items: center;

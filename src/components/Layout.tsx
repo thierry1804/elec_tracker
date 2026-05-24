@@ -18,6 +18,7 @@ import {
   IconAchat,
   IconDashboard,
   IconParametres,
+  IconBolt,
   IconReleve,
   IconReleves,
 } from './nav/NavIcons';
@@ -67,7 +68,9 @@ export default function Layout() {
             <header className="header">
               <div className="header-left">
                 <div className="logo">
-                  <div className="logo-icon">⚡</div>
+                  <div className="logo-icon" aria-hidden>
+                    <IconBolt />
+                  </div>
                   <span className="logo-name">ElecTracker</span>
                   <span className="badge-prepaye badge-prepaye-full">PRÉPAYÉ</span>
                   <CompteurSwitcher />

@@ -63,7 +63,7 @@ export function tryShowReminder(joursRestants: number | null): void {
   if (getLastNotifiedDate() === today) return;
 
   try {
-    new Notification('ElecTracker — Pensez à recharger', {
+    new Notification('ElecTracker : Pensez à recharger', {
       body:
         joursRestants <= 0
           ? 'Votre crédit devrait être épuisé. Rechargez dès que possible.'
@@ -109,7 +109,7 @@ export function tryShowReminderHabit(prochaineRechargeHabitude: Date | null): vo
       month: 'long',
       year: 'numeric',
     });
-    new Notification('ElecTracker — Recharge suggérée (habitude)', {
+    new Notification('ElecTracker : Recharge suggérée (habitude)', {
       body: `Prochaine recharge suggérée (habitude) : ${dateLabel}.`,
       icon: '/favicon.svg',
     });

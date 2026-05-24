@@ -148,7 +148,7 @@ export function generateReportHtml(data: AppData): string {
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <title>Rapport ElecTracker — ${new Date().toLocaleDateString('fr-FR')}</title>
+  <title>Rapport ElecTracker · ${new Date().toLocaleDateString('fr-FR')}</title>
   <style>
     body { font-family: system-ui, sans-serif; margin: 1.5rem; color: #333; }
     h1 { font-size: 1.25rem; }
@@ -162,7 +162,7 @@ export function generateReportHtml(data: AppData): string {
   </style>
 </head>
 <body>
-  <h1>Rapport ElecTracker — ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</h1>
+  <h1>Rapport ElecTracker · ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</h1>
   <h2>Synthèse</h2>
   <p><strong>Solde actuel :</strong> ${creditRestant} kWh</p>
   <p><strong>Dernier relevé :</strong> ${dernierReleve ? formatDate(dernierReleve.date) : '—'}</p>

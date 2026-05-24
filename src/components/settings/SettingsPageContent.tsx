@@ -4,6 +4,8 @@ import { exportRelevesCSV, exportAchatsCSV } from '../../lib/csvExport';
 import { downloadReportHtml } from '../../lib/reportExport';
 import { downloadReportPdf } from '../../lib/pdfExport';
 import { generateTextSummary, copyToClipboard } from '../../lib/clipboardSummary';
+import DeleteConfirmButton from '../DeleteConfirmButton';
+import { IconTrash } from '../nav/NavIcons';
 import '../Modal.css';
 import './Settings.css';
 
@@ -330,21 +332,18 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
                   {(currentSettings.compteurs ?? []).map((c) => (
                     <div key={c.id} className="settings-compteur-row">
                       <span>{c.nom}</span>
-                      <button
-                        type="button"
-                        className="btn-delete btn-delete-icon"
-                        onClick={() => {
+                      <DeleteConfirmButton
+                        itemLabel={c.nom}
+                        undoMessage={`Compteur « ${c.nom} » supprimé`}
+                        onConfirm={() => {
                           const compteurs = (currentSettings.compteurs ?? []).filter((x) => x.id !== c.id);
                           const patch: Partial<typeof currentSettings> = { compteurs };
                           if (currentSettings.compteurActifId === c.id) patch.compteurActifId = undefined;
                           updateSettings(patch);
                           if (currentSettings.compteurActifId === c.id) window.location.reload();
                         }}
-                        title="Supprimer"
-                        aria-label={`Supprimer ${c.nom}`}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                      </button>
+                        icon={<IconTrash />}
+                      />
                     </div>
                   ))}
                 </div>
@@ -520,7 +519,7 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
                   type="file"
                   accept=".json"
                   onChange={handleImportFile}
-                  style={{ display: 'none' }}
+                  className="input-hidden"
                   aria-label="Choisir un fichier de sauvegarde JSON"
                 />
               </label>

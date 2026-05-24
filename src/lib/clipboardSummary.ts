@@ -22,7 +22,7 @@ export function generateTextSummary(data: AppData): string {
   })();
 
   const lines: string[] = [
-    `ElecTracker — ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`,
+    `ElecTracker · ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`,
     `Solde : ${credit} kWh`,
     taux != null ? `Conso. moyenne : ${taux.toFixed(2)} kWh/j` : '',
     coutMensuel != null ? `Coût mensuel estimé : ${coutMensuel} Ar` : '',

@@ -21,7 +21,7 @@ export function getConseilContextuel(
 
   const prixComparaison = getComparaisonPrixMoyenCeMoisVsDernier(data.achats);
   if (prixComparaison?.evolutionPct != null && prixComparaison.evolutionPct > 5) {
-    return "Votre prix moyen a augmenté ce mois — comparez les offres.";
+    return "Votre prix moyen a augmenté ce mois ; comparez les offres.";
   }
 
   return null;

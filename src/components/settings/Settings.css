@@ -6,6 +6,10 @@
   gap: 0;
 }
 
+.page-stack.settings-page {
+  gap: 0;
+}
+
 /* ── Onglets ── */
 
 .settings-tabs {

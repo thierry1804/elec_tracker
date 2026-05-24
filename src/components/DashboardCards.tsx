@@ -202,10 +202,10 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
             </div>
           )}
           <div className="stat-sub">
-            Moy. pondérée 7j / 30j
+            Moyenne sur 7 et 30 jours
             {previsionLoading && <span> (IA…)</span>}
             {!previsionLoading && previsionPeuFiable && tauxJournalier != null && (
-              <span className="stat-sub-warning"> — peu fiable</span>
+              <span className="stat-sub-warning">, peu fiable</span>
             )}
           </div>
         </div>
