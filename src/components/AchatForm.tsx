@@ -184,6 +184,7 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
               onChange={handleDateChange}
               onCalendarClose={() => setCalendarOpen(false)}
               locale={fr}
+              portalId="datepicker-portal"
               dateFormat="dd/MM/yyyy"
               placeholderText="jj/mm/aaaa"
               className={`input-datepicker ${errors.date ? 'input-invalid' : ''}`}

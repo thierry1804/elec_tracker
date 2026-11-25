@@ -136,6 +136,7 @@ export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
               onChange={handleDateChange}
               onCalendarClose={() => setCalendarOpen(false)}
               locale={fr}
+              portalId="datepicker-portal"
               dateFormat="dd/MM/yyyy"
               placeholderText="jj/mm/aaaa"
               className={`input-datepicker ${errors.date ? 'input-invalid' : ''}`}
