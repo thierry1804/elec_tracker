@@ -11,6 +11,7 @@ import {
   Legend,
 } from 'recharts';
 import { getDonneesGraphiqueConso } from '../lib/calculs';
+import { useCompteurMode } from '../lib/compteurMode';
 import { useSettings } from '../context/SettingsContext';
 import { usePrevision } from '../context/PrevisionContext';
 import type { Releve } from '../types';
@@ -46,12 +47,13 @@ export default function ConsommationChart({ releves }: ConsommationChartProps) {
   const { settings } = useSettings();
   const periodeJours = useChartPeriodeJours();
   const prevision = usePrevision();
+  const mode = useCompteurMode();
   const objectifKwhJour =
     settings.objectifKwhMois != null
       ? Math.round((settings.objectifKwhMois / 30) * 100) / 100
       : null;
 
-  let histo = getDonneesGraphiqueConso(releves);
+  let histo = getDonneesGraphiqueConso(releves, mode);
   if (periodeJours != null && periodeJours > 0) {
     const limit = Date.now() - periodeJours * MS_PER_DAY;
     histo = histo.filter((p) => new Date(p.dateIso + 'T12:00:00').getTime() >= limit);

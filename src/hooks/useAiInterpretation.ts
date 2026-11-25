@@ -5,6 +5,7 @@ import { useEmbeddedAi } from '../context/EmbeddedAiContext';
 import { buildFullAiContext, hashAiContext } from '../lib/ai/buildContext';
 import type { InterpretationResult } from '../lib/ai/parseResponse';
 import { getConseilContextuel } from '../lib/conseils';
+import { useCompteurMode } from '../lib/compteurMode';
 
 export interface AiInterpretationState {
   loading: boolean;
@@ -18,16 +19,17 @@ export function useAiInterpretation(
   prevision: PrevisionResult | null
 ): AiInterpretationState {
   const { isReady, runTask } = useEmbeddedAi();
+  const mode = useCompteurMode();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<InterpretationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fallbackConseil = useMemo(
-    () => getConseilContextuel(data, prevision),
-    [data, prevision]
+    () => getConseilContextuel(data, prevision, mode),
+    [data, prevision, mode]
   );
 
-  const context = useMemo(() => buildFullAiContext(data, prevision), [data, prevision]);
+  const context = useMemo(() => buildFullAiContext(data, prevision, mode), [data, prevision, mode]);
   const contextHash = useMemo(() => hashAiContext(context), [context]);
 
   useEffect(() => {

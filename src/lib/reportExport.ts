@@ -3,6 +3,7 @@ import { getRelevesTries } from './calculs';
 import { getPrixMoyenArPerKwh, getCoutMensuelEstime } from './calculs';
 import { getTauxJournalierPondere } from './calculs';
 import { loadSettings } from './storage';
+import { resolveCompteurMode } from './compteurMode';
 import type { ReportSynthesisResult } from './ai/parseResponse';
 import {
   getResumeHebdoEtMensuel,
@@ -48,11 +49,13 @@ export function generateReportHtml(
   const tries = getRelevesTries(releves);
   const dernierReleve = tries[tries.length - 1];
   const creditRestant = dernierReleve?.creditRestantKwh ?? 0;
+  const settings = loadSettings();
+  const mode = resolveCompteurMode(settings);
+  const postpaye = mode === 'postpaye';
   const prixMoyen = getPrixMoyenArPerKwh(achats);
-  const taux = getTauxJournalierPondere(releves);
+  const taux = getTauxJournalierPondere(releves, mode);
   const coutMensuel =
     taux != null && prixMoyen != null ? getCoutMensuelEstime(taux, prixMoyen) : null;
-  const settings = loadSettings();
   const kwhMoisEstime = taux != null ? Math.round(taux * 30 * 10) / 10 : null;
 
   const rowsReleves = tries
@@ -90,15 +93,16 @@ export function generateReportHtml(
   const hasData = releves.length >= 2 || achats.length >= 1;
 
   if (hasData) {
-    const resume = getResumeHebdoEtMensuel(releves, achats);
+    const resume = getResumeHebdoEtMensuel(releves, achats, mode);
+    const argent = postpaye ? 'factures' : 'recharges';
     insightsLines.push(
-      `<li>7 derniers jours : ${resume.semaine.kwh} kWh consommés, recharges ${formatAr(resume.semaine.coutAr)}</li>`
+      `<li>7 derniers jours : ${resume.semaine.kwh} kWh consommés, ${argent} ${formatAr(resume.semaine.coutAr)}</li>`
     );
     insightsLines.push(
-      `<li>Mois en cours : ${resume.mois.kwh} kWh consommés, recharges ${formatAr(resume.mois.coutAr)}</li>`
+      `<li>Mois en cours : ${resume.mois.kwh} kWh consommés, ${argent} ${formatAr(resume.mois.coutAr)}</li>`
     );
 
-    const comparaison = getComparaisonCeMoisVsDernier(releves, achats);
+    const comparaison = getComparaisonCeMoisVsDernier(releves, achats, mode);
     if (comparaison) {
       const evKwh = comparaison.evolutionKwhPct != null ? ` (${comparaison.evolutionKwhPct > 0 ? '+' : ''}${comparaison.evolutionKwhPct} %)` : '';
       const evCout = comparaison.evolutionCoutPct != null ? ` (${comparaison.evolutionCoutPct > 0 ? '+' : ''}${comparaison.evolutionCoutPct} %)` : '';
@@ -114,7 +118,7 @@ export function generateReportHtml(
       insightsLines.push(`<li>Prix moyen : ce mois ${ce}, précédent ${prec}</li>`);
     }
 
-    const tendance = getTendanceConsoIndicateur(releves);
+    const tendance = getTendanceConsoIndicateur(releves, mode);
     if (tendance.evolutionPct != null) {
       const labels = { baisse: 'en baisse', stable: 'stable', hausse: 'en hausse' };
       insightsLines.push(
@@ -122,13 +126,14 @@ export function generateReportHtml(
       );
     }
 
-    const prevision = getPrevisionAnnuelle(releves, achats);
+    const prevision = getPrevisionAnnuelle(releves, achats, mode);
     if (prevision) {
       insightsLines.push(
         `<li>Projection annuelle : ${formatAr(prevision.coutAnnuelEstime)} (fourchette ${formatAr(prevision.coutMin)} – ${formatAr(prevision.coutMax)})</li>`
       );
     }
 
+    if (!postpaye) {
     const recharge = getRechargeTypique(achats);
     if (recharge) {
       let line = `Fréquence recharge : ~${recharge.intervalleMoyenJours} jours`;
@@ -137,8 +142,9 @@ export function generateReportHtml(
       }
       insightsLines.push(`<li>${line}</li>`);
     }
+    }
 
-    const saison = getSaisonnalite(releves, achats);
+    const saison = getSaisonnalite(releves, achats, mode);
     if (saison?.message) {
       insightsLines.push(`<li>${escapeHtml(saison.message)}</li>`);
     }
@@ -174,9 +180,9 @@ export function generateReportHtml(
 <body>
   <h1>Rapport ElecTracker · ${new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</h1>
   <h2>Synthèse</h2>
-  <p><strong>Solde actuel :</strong> ${creditRestant} kWh</p>
+  <p><strong>${postpaye ? 'Index actuel' : 'Solde actuel'} :</strong> ${creditRestant} kWh</p>
   <p><strong>Dernier relevé :</strong> ${dernierReleve ? formatDate(dernierReleve.date) : '—'}</p>
-  <p><strong>Dernier achat :</strong> ${achats.length > 0 ? formatDate([...achats].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].date) : '—'}</p>
+  <p><strong>${postpaye ? 'Dernière facture' : 'Dernier achat'} :</strong> ${achats.length > 0 ? formatDate([...achats].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].date) : '—'}</p>
   <p><strong>Consommation moyenne (taux journalier) :</strong> ${taux != null ? taux.toFixed(2) + ' kWh/j' : '—'}</p>
   <p><strong>Coût mensuel estimé :</strong> ${coutMensuel != null ? coutMensuel + ' Ar' : '—'}</p>
   <p><strong>kWh/mois estimé :</strong> ${kwhMoisEstime != null ? kwhMoisEstime + ' kWh' : '—'}</p>
@@ -185,9 +191,9 @@ export function generateReportHtml(
   ${aiSection}
   ${insightsSection}
   <h2>Derniers relevés</h2>
-  <table><thead><tr><th>Date</th><th>Crédit restant (kWh)</th></tr></thead><tbody>${rowsReleves || '<tr><td colspan="2">Aucun relevé</td></tr>'}</tbody></table>
-  <h2>Derniers achats</h2>
-  <table><thead><tr><th>Date</th><th>Montant (Ar)</th><th>Crédit (kWh)</th><th>Prix unitaire (Ar/kWh)</th></tr></thead><tbody>${rowsAchats || '<tr><td colspan="4">Aucun achat</td></tr>'}</tbody></table>
+  <table><thead><tr><th>Date</th><th>${postpaye ? 'Index (kWh)' : 'Crédit restant (kWh)'}</th></tr></thead><tbody>${rowsReleves || '<tr><td colspan="2">Aucun relevé</td></tr>'}</tbody></table>
+  <h2>${postpaye ? 'Dernières factures' : 'Derniers achats'}</h2>
+  <table><thead><tr><th>Date</th><th>Montant (Ar)</th><th>${postpaye ? 'kWh facturés' : 'Crédit (kWh)'}</th><th>Prix unitaire (Ar/kWh)</th></tr></thead><tbody>${rowsAchats || '<tr><td colspan="4">Aucune entrée</td></tr>'}</tbody></table>
 </body>
 </html>`;
 }

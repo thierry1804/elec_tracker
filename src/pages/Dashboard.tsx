@@ -18,6 +18,7 @@ import { getAnomalieConsommation } from '../lib/analytics';
 import { getConseilContextuel } from '../lib/conseils';
 import { useAiInterpretation } from '../hooks/useAiInterpretation';
 import { useSettings } from '../context/SettingsContext';
+import { getJoursDepuisReleve, SEUIL_JOURS_RELEVE_POSTPAYE, useCompteurMode } from '../lib/compteurMode';
 import CollapsibleSection from '../components/CollapsibleSection';
 import PageHeader from '../components/PageHeader';
 
@@ -26,18 +27,25 @@ export default function Dashboard() {
   const layoutActions = useLayoutActions();
   const prevision = usePrevision();
   const { releves, achats } = data;
+  const mode = useCompteurMode();
+  const postpaye = mode === 'postpaye';
   const tries = getRelevesTries(releves);
   const dernierReleve = tries[tries.length - 1];
   const creditRestant = dernierReleve?.creditRestantKwh ?? 0;
   const { tauxJournalier, joursRestants } = prevision;
-  const alerte = isAlerteCreditFaible(creditRestant, joursRestants ?? 0);
+  const alerte = !postpaye && isAlerteCreditFaible(creditRestant, joursRestants ?? 0);
+  const joursDepuisReleve = getJoursDepuisReleve(dernierReleve?.date);
+  const releveAncien =
+    postpaye &&
+    joursDepuisReleve != null &&
+    joursDepuisReleve > SEUIL_JOURS_RELEVE_POSTPAYE;
 
   const hasReleves = releves.length > 0;
   const predictionDisponible = joursRestants !== null;
   const showAlert = hasReleves && alerte && predictionDisponible;
-  const messagePrevision = getMessageAvertissementPrevision(releves);
+  const messagePrevision = getMessageAvertissementPrevision(releves, mode);
 
-  const anomalie = getAnomalieConsommation(releves);
+  const anomalie = getAnomalieConsommation(releves, mode);
   const showAnomalieAlert = hasReleves && anomalie?.isPic === true;
 
   const { settings } = useSettings();
@@ -56,7 +64,7 @@ export default function Dashboard() {
     ? Math.round(coutMensuel - budgetAr)
     : 0;
 
-  const conseil = getConseilContextuel(data, prevision);
+  const conseil = getConseilContextuel(data, prevision, mode);
   const aiInterpretation = useAiInterpretation(data, prevision);
 
   const currentMonthKey = (() => {
@@ -80,6 +88,21 @@ export default function Dashboard() {
       ),
       action: layoutActions
         ? { label: 'Recharger', onClick: () => layoutActions.openAchat() }
+        : undefined,
+    });
+  }
+  if (releveAncien) {
+    dashboardAlerts.push({
+      id: 'releve-ancien',
+      kind: 'warning',
+      priority: 1,
+      message: (
+        <>
+          Dernier relevé il y a {joursDepuisReleve} jours. Notez l'index du compteur.
+        </>
+      ),
+      action: layoutActions
+        ? { label: 'Relevé', onClick: () => layoutActions.openReleve() }
         : undefined,
     });
   }
@@ -169,12 +192,24 @@ export default function Dashboard() {
         <div className="dashboard-empty" role="status">
           <h2 className="dashboard-empty-title">Bienvenue sur ElecTracker</h2>
           <p className="dashboard-empty-text">
-            Trois étapes pour suivre votre électricité prépayée :
+            {postpaye
+              ? 'Pour suivre votre électricité postpayée :'
+              : 'Trois étapes pour suivre votre électricité prépayée :'}
           </p>
           <ol className="dashboard-empty-steps">
-            <li><strong>Relevé initial</strong> : notez le kWh restant sur le compteur</li>
-            <li><strong>Achat</strong> : enregistrez chaque recharge (montant + crédit)</li>
-            <li><strong>Relevés réguliers</strong> : mettez à jour le solde pour affiner les estimations</li>
+            {postpaye ? (
+              <>
+                <li><strong>Relevé d'index</strong> : notez le kWh cumulé affiché sur le compteur</li>
+                <li><strong>Facture</strong> : enregistrez le montant et les kWh facturés</li>
+                <li><strong>Relevés réguliers</strong> : mettez à jour l'index pour suivre la consommation</li>
+              </>
+            ) : (
+              <>
+                <li><strong>Relevé initial</strong> : notez le kWh restant sur le compteur</li>
+                <li><strong>Achat</strong> : enregistrez chaque recharge (montant + crédit)</li>
+                <li><strong>Relevés réguliers</strong> : mettez à jour le solde pour affiner les estimations</li>
+              </>
+            )}
           </ol>
           <button
             type="button"
@@ -193,9 +228,11 @@ export default function Dashboard() {
       <PageHeader
         title="Dashboard"
         lead={
-          joursRestants != null
-            ? `${creditRestant.toFixed(1).replace('.', ',')} kWh restants · ~${joursRestants} j`
-            : `${creditRestant.toFixed(1).replace('.', ',')} kWh restants`
+          postpaye
+            ? `Index ${creditRestant.toFixed(1).replace('.', ',')} kWh`
+            : joursRestants != null
+              ? `${creditRestant.toFixed(1).replace('.', ',')} kWh restants · ~${joursRestants} j`
+              : `${creditRestant.toFixed(1).replace('.', ',')} kWh restants`
         }
       />
       <div className="page-stack">
@@ -207,7 +244,7 @@ export default function Dashboard() {
       </div>
       <CollapsibleSection title="Analyse détaillée" defaultOpen={false}>
         <KwhMoisChart data={data} />
-        <ProchainAchatCTA data={data} />
+        {!postpaye && <ProchainAchatCTA data={data} />}
         <DashboardAnalytics data={data} />
       </CollapsibleSection>
       </div>

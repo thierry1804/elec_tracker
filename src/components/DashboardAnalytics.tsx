@@ -12,6 +12,7 @@ import {
   getSaisonnalite,
 } from '../lib/analytics';
 import { detecterPaliersJirama } from '../lib/jirama';
+import { useCompteurMode } from '../lib/compteurMode';
 
 interface DashboardAnalyticsProps {
   data: AppData;
@@ -70,16 +71,18 @@ function StatPair({ label, value, sub }: { label: string; value: string; sub: st
 
 export default function DashboardAnalytics({ data }: DashboardAnalyticsProps) {
   const { releves, achats } = data;
-  const resume = getResumeHebdoEtMensuel(releves, achats);
-  const comparaison = getComparaisonCeMoisVsDernier(releves, achats);
-  const prixComparaison = getComparaisonPrixMoyenCeMoisVsDernier(achats);
-  const tendance = getTendanceConsoIndicateur(releves);
-  const previsionAnnuelle = getPrevisionAnnuelle(releves, achats);
-  const economie = getEconomieMensuelleSiReduction(releves, achats, 10);
-  const rechargeTypique = getRechargeTypique(achats);
-  const saisonnalite = getSaisonnalite(releves, achats);
-  const paliersJirama = detecterPaliersJirama(achats);
   const { settings } = useSettings();
+  const mode = useCompteurMode();
+  const postpaye = mode === 'postpaye';
+  const resume = getResumeHebdoEtMensuel(releves, achats, mode);
+  const comparaison = getComparaisonCeMoisVsDernier(releves, achats, mode);
+  const prixComparaison = getComparaisonPrixMoyenCeMoisVsDernier(achats);
+  const tendance = getTendanceConsoIndicateur(releves, mode);
+  const previsionAnnuelle = getPrevisionAnnuelle(releves, achats, mode);
+  const economie = getEconomieMensuelleSiReduction(releves, achats, 10, mode);
+  const rechargeTypique = postpaye ? null : getRechargeTypique(achats);
+  const saisonnalite = getSaisonnalite(releves, achats, mode);
+  const paliersJirama = postpaye ? null : detecterPaliersJirama(achats);
 
   const hasData = releves.length >= 2 || achats.length >= 1;
   const fmt = (ar: number) => formatMontant(ar, settings);
@@ -111,13 +114,13 @@ export default function DashboardAnalytics({ data }: DashboardAnalyticsProps) {
         <div className="analytics-overview-card">
           <p className="analytics-overview-heading">7 derniers jours</p>
           <dl className="analytics-stat-list">
-            <StatPair label="Consommation" value={kwhSem} sub={`Recharges : ${coutSem}`} />
+            <StatPair label="Consommation" value={kwhSem} sub={`${postpaye ? 'Factures' : 'Recharges'} : ${coutSem}`} />
           </dl>
         </div>
         <div className="analytics-overview-card">
           <p className="analytics-overview-heading">Mois en cours</p>
           <dl className="analytics-stat-list">
-            <StatPair label="Consommation" value={kwhMois} sub={`Recharges : ${coutMois}`} />
+            <StatPair label="Consommation" value={kwhMois} sub={`${postpaye ? 'Factures' : 'Recharges'} : ${coutMois}`} />
           </dl>
         </div>
       </div>
@@ -137,7 +140,7 @@ export default function DashboardAnalytics({ data }: DashboardAnalyticsProps) {
               )}
             </li>
             <li className="analytics-metric-row">
-              <span className="analytics-metric-name">Coût recharges</span>
+              <span className="analytics-metric-name">{postpaye ? 'Coût factures' : 'Coût recharges'}</span>
               <span className="analytics-metric-vals">
                 {fmt(comparaison.coutCeMois)} <span className="analytics-metric-vs">vs</span>{' '}
                 {fmt(comparaison.coutMoisDernier)}
@@ -228,7 +231,7 @@ export default function DashboardAnalytics({ data }: DashboardAnalyticsProps) {
           <h4 className="analytics-section-title">Si vous réduisez de 10 %</h4>
           <p className="analytics-value">
             Économie d’environ <strong className="analytics-em">{fmt(economie)}</strong> par mois sur les
-            recharges, à prix moyen actuel.
+            {postpaye ? ' factures' : ' recharges'}, à prix moyen actuel.
           </p>
         </div>
       )}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { IconAchat, IconPlus, IconReleve } from './nav/NavIcons';
+import { labelNouvelAchat, useCompteurMode } from '../lib/compteurMode';
 import './ActionSheet.css';
 
 interface ActionSheetProps {
@@ -10,6 +11,8 @@ interface ActionSheetProps {
 export default function ActionSheet({ onReleve, onAchat }: ActionSheetProps) {
   const [open, setOpen] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const mode = useCompteurMode();
+  const achatLabel = labelNouvelAchat(mode);
 
   useEffect(() => {
     if (!open) return;
@@ -26,7 +29,13 @@ export default function ActionSheet({ onReleve, onAchat }: ActionSheetProps) {
         type="button"
         className={`fab${open ? ' fab-open' : ''}`}
         onClick={() => setOpen((o) => !o)}
-        aria-label={open ? 'Fermer le menu' : 'Ajouter un relevé ou un achat'}
+        aria-label={
+          open
+            ? 'Fermer le menu'
+            : mode === 'postpaye'
+              ? 'Ajouter un relevé ou une facture'
+              : 'Ajouter un relevé ou un achat'
+        }
         aria-expanded={open}
       >
         <IconPlus />
@@ -57,7 +66,7 @@ export default function ActionSheet({ onReleve, onAchat }: ActionSheetProps) {
               }}
             >
               <IconAchat />
-              <span>Nouvel achat</span>
+              <span>{achatLabel}</span>
             </button>
           </div>
         </>

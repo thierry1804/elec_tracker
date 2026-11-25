@@ -10,14 +10,17 @@ import type { ConsoEntreReleves } from '../lib/calculs';
 import ReleveForm from '../components/ReleveForm';
 import DeleteConfirmButton from '../components/DeleteConfirmButton';
 import { useLayoutActions } from '../context/LayoutContext';
+import { labelReleveValeur, useCompteurMode } from '../lib/compteurMode';
 import { IconEdit, IconTrash } from '../components/nav/NavIcons';
 
 export default function Historique() {
   const { data, deleteReleve, restoreReleve } = useApp();
   const layoutActions = useLayoutActions();
+  const mode = useCompteurMode();
+  const postpaye = mode === 'postpaye';
   const [editingReleveId, setEditingReleveId] = useState<string | null>(null);
   const tries = getRelevesTries(data.releves);
-  const consos = getConsommationsEntreReleves(data.releves);
+  const consos = getConsommationsEntreReleves(data.releves, mode);
   const editingReleve = editingReleveId
     ? data.releves.find((r) => r.id === editingReleveId) ?? null
     : null;
@@ -99,7 +102,10 @@ export default function Historique() {
         <div className="page-empty dashboard-empty" role="status">
           <h2 className="dashboard-empty-title">Relevés</h2>
           <p className="dashboard-empty-text">
-            Aucun relevé enregistré. Notez le kWh restant affiché sur votre compteur pour démarrer le suivi.
+            Aucun relevé enregistré.{' '}
+            {postpaye
+              ? "Notez l'index kWh affiché sur votre compteur pour démarrer le suivi."
+              : 'Notez le kWh restant affiché sur votre compteur pour démarrer le suivi.'}
           </p>
           <button type="button" className="btn btn-primary" onClick={() => layoutActions?.openReleve()}>
             + Premier relevé
@@ -121,7 +127,7 @@ export default function Historique() {
           <thead>
             <tr>
               <th>Date et heure</th>
-              <th>Crédit restant (kWh)</th>
+              <th>{labelReleveValeur(mode)}</th>
               <th>Consommation calculée (kWh)</th>
               <th aria-label="Actions"></th>
             </tr>
@@ -138,7 +144,9 @@ export default function Historique() {
                     {conso != null
                       ? conso.kwhConsommes >= 0
                         ? `${conso.kwhConsommes.toFixed(2)} (sur ${formatDuree(conso.nbJours)})`
-                        : ligneRechargement(conso)
+                        : postpaye
+                          ? `Index en baisse ${conso.kwhConsommes.toFixed(2)} kWh (sur ${formatDuree(conso.nbJours)})`
+                          : ligneRechargement(conso)
                       : '—'}
                   </td>
                   <td>

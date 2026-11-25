@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import type { AppData } from '../types';
 import { getRelevesTries, getPrixMoyenArPerKwh, getTauxJournalierPondere, getCoutMensuelEstime } from './calculs';
 import { loadSettings } from './storage';
+import { resolveCompteurMode } from './compteurMode';
 import type { ReportSynthesisResult } from './ai/parseResponse';
 
 function formatDate(d: string): string {
@@ -21,11 +22,13 @@ export function downloadReportPdf(
   const tries = getRelevesTries(releves);
   const dernier = tries[tries.length - 1];
   const credit = dernier?.creditRestantKwh ?? 0;
-  const taux = getTauxJournalierPondere(releves);
+  const settings = loadSettings();
+  const mode = resolveCompteurMode(settings);
+  const postpaye = mode === 'postpaye';
+  const taux = getTauxJournalierPondere(releves, mode);
   const prixMoyen = getPrixMoyenArPerKwh(achats);
   const coutMensuel = taux != null && prixMoyen != null ? getCoutMensuelEstime(taux, prixMoyen) : null;
   const kwhMois = taux != null ? Math.round(taux * 30 * 10) / 10 : null;
-  const settings = loadSettings();
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
@@ -46,7 +49,7 @@ export function downloadReportPdf(
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   const summaryLines = [
-    `Solde actuel : ${credit} kWh`,
+    `${postpaye ? 'Index actuel' : 'Solde actuel'} : ${credit} kWh`,
     `Dernier releve : ${dernier ? formatDate(dernier.date) : '-'}`,
     `Consommation moyenne : ${taux != null ? taux.toFixed(2) + ' kWh/j' : '-'}`,
     `Cout mensuel estime : ${coutMensuel != null ? coutMensuel + ' Ar' : '-'}`,
@@ -107,7 +110,7 @@ export function downloadReportPdf(
 
   autoTable(doc, {
     startY: y,
-    head: [['Date', 'Credit restant (kWh)']],
+    head: [['Date', postpaye ? 'Index (kWh)' : 'Credit restant (kWh)']],
     body: releveRows.length > 0 ? releveRows : [['Aucun releve', '']],
     styles: { fontSize: 9, cellPadding: 2 },
     headStyles: { fillColor: [88, 166, 255] },
@@ -120,7 +123,7 @@ export function downloadReportPdf(
 
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('Derniers achats', 14, achatStartY);
+  doc.text(postpaye ? 'Dernieres factures' : 'Derniers achats', 14, achatStartY);
 
   const achatRows = [...achats]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -134,8 +137,8 @@ export function downloadReportPdf(
 
   autoTable(doc, {
     startY: achatStartY + 2,
-    head: [['Date', 'Montant (Ar)', 'Credit (kWh)', 'Prix (Ar/kWh)']],
-    body: achatRows.length > 0 ? achatRows : [['Aucun achat', '', '', '']],
+    head: [['Date', 'Montant (Ar)', postpaye ? 'kWh factures' : 'Credit (kWh)', 'Prix (Ar/kWh)']],
+    body: achatRows.length > 0 ? achatRows : [[postpaye ? 'Aucune facture' : 'Aucun achat', '', '', '']],
     styles: { fontSize: 9, cellPadding: 2 },
     headStyles: { fillColor: [210, 153, 34] },
     margin: { left: 14, right: 14 },

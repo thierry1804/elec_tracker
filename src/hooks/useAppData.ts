@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AppData, Achat, Releve } from '../types';
 import { loadData, saveData, generateId, loadDataForCompteur, saveDataForCompteur, loadSettings } from '../lib/storage';
+import { resolveCompteurMode } from '../lib/compteurMode';
 
 function dateStrToLocalEndOfDayMs(date: string): number {
   // Si `date` inclut une heure (ISO), on prend directement le timestamp.
@@ -79,15 +80,28 @@ export function useAppData() {
 
   const addAchat = useCallback((date: string, montantAr: number, creditKwh: number) => {
     const prixUnitaireArPerKwh = creditKwh > 0 ? montantAr / creditKwh : 0;
+    const mode = resolveCompteurMode(loadSettings());
     const achat: Achat = {
       id: generateId(),
-      // On mettra une date ISO cohérente (fin de journée locale) plus bas.
       date,
       montantAr,
       creditKwh,
       prixUnitaireArPerKwh,
     };
     setData((prev) => {
+      if (mode === 'postpaye') {
+        return {
+          ...prev,
+          achats: [
+            ...prev.achats,
+            {
+              ...achat,
+              date: dateStrToIso(date),
+            },
+          ],
+        };
+      }
+
       const relevesTries = [...prev.releves].sort(
         (a, b) => dateStrToLocalEndOfDayMs(a.date) - dateStrToLocalEndOfDayMs(b.date)
       );

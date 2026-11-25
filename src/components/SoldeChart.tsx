@@ -12,6 +12,7 @@ import {
   ReferenceArea,
 } from 'recharts';
 import { getDonneesGraphiqueSolde } from '../lib/calculs';
+import { useCompteurMode } from '../lib/compteurMode';
 import type { Releve } from '../types';
 import { usePrevision } from '../context/PrevisionContext';
 import ChartShell, { useChartPeriodeJours } from './ChartShell';
@@ -55,6 +56,9 @@ function parseReleveDayMs(dateStr: string): number {
 
 export default function SoldeChart({ releves }: SoldeChartProps) {
   const periodeJours = useChartPeriodeJours();
+  const postpaye = useCompteurMode() === 'postpaye';
+  const titre = postpaye ? "Évolution de l'index" : 'Évolution du solde';
+  const libelleDernier = postpaye ? 'Dernier index' : 'Dernier solde';
   let actualData = getDonneesGraphiqueSolde(releves);
   if (periodeJours != null && periodeJours > 0) {
     const limit = Date.now() - periodeJours * MS_PER_DAY;
@@ -68,7 +72,7 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
     return (
       <div className="chart-container">
         <div className="chart-header">
-          <h3 className="chart-title">Évolution du solde</h3>
+          <h3 className="chart-title">{titre}</h3>
         </div>
         <div className="chart-empty">
           <p className="chart-empty-text">Ajoutez des relevés pour voir l'évolution</p>
@@ -88,7 +92,7 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
 
   const summary = (
     <>
-      Dernier solde :{' '}
+      {libelleDernier} :{' '}
       <strong className="mono">{lastActual.solde.toFixed(1).replace('.', ',')} kWh</strong>
       {deltaStr && <> · {deltaStr}</>}
     </>
@@ -135,13 +139,13 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
 
   return (
     <ChartShell
-      title="Évolution du solde"
+      title={titre}
       summary={summary}
       showPeriod
-      ariaSummary={`Solde électrique, dernier relevé ${lastActual.solde.toFixed(1)} kilowattheures`}
+      ariaSummary={`${postpaye ? 'Index' : 'Solde'} électrique, dernier relevé ${lastActual.solde.toFixed(1)} kilowattheures`}
       tableColumns={[
         { key: 'date', header: 'Date' },
-        { key: 'solde', header: 'Solde', align: 'right' },
+        { key: 'solde', header: postpaye ? 'Index' : 'Solde', align: 'right' },
         { key: 'type', header: 'Type' },
       ]}
       tableRows={tableRows}
@@ -158,7 +162,7 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
                 labelFormatter={(l) => formatDateLong(l)}
                 rowFormatter={(key, val) => {
                   const labels: Record<string, string> = {
-                    solde: 'Solde réel',
+                    solde: postpaye ? 'Index' : 'Solde réel',
                     prevision: 'Prévision',
                   };
                   return {

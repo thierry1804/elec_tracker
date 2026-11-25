@@ -21,9 +21,13 @@ export interface AppData {
 
 export type TabId = 'dashboard' | 'releves' | 'achats' | 'parametres';
 
+/** Prépayé : crédit restant qui baisse. Postpayé : index cumulé qui monte. */
+export type CompteurMode = 'prepaye' | 'postpaye';
+
 export interface Compteur {
   id: string;
   nom: string;
+  mode: CompteurMode;
 }
 
 
@@ -53,4 +57,6 @@ export interface AppSettings {
   compteurs?: Compteur[];
   /** ID du compteur actuellement sélectionné. */
   compteurActifId?: string;
+  /** Type du compteur principal (stockage sans id). Absent = prépayé. */
+  modePrincipal?: CompteurMode;
 }

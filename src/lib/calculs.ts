@@ -1,4 +1,4 @@
-import type { Achat, Releve } from '../types';
+import type { Achat, CompteurMode, Releve } from '../types';
 
 const JOURS_MARGE_ACHAT = 3;
 const SEUIL_KWH_ALERTE = 20;
@@ -42,13 +42,19 @@ const JOURS_MIN_HISTORIQUE_PREVISION = 2;
 /** En dessous de ce nombre de jours d'historique, la prévision est considérée comme peu fiable. */
 const JOURS_SEUIL_FIABILITE_PREVISION = 3;
 
-export function getConsommationsEntreReleves(releves: Releve[]): ConsoEntreReleves[] {
+export function getConsommationsEntreReleves(
+  releves: Releve[],
+  mode: CompteurMode = 'prepaye'
+): ConsoEntreReleves[] {
   const tries = getRelevesTries(releves);
   const result: ConsoEntreReleves[] = [];
   for (let i = 1; i < tries.length; i++) {
     const prev = tries[i - 1];
     const curr = tries[i];
-    const kwhConsommes = prev.creditRestantKwh - curr.creditRestantKwh;
+    const kwhConsommes =
+      mode === 'postpaye'
+        ? curr.creditRestantKwh - prev.creditRestantKwh
+        : prev.creditRestantKwh - curr.creditRestantKwh;
     const dateDebutMs = dateStrToLocalEndOfDayMs(prev.date);
     const dateFinMs = dateStrToLocalEndOfDayMs(curr.date);
     const deltaMs = dateFinMs - dateDebutMs;
@@ -103,8 +109,11 @@ export function getSpanHistoriqueJours(releves: Releve[]): number {
  * Consommations entre relevés dont l'intervalle est >= 6h.
  * Utilisé pour la prévision pour éviter d'extrapoler à partir de snapshots horaires.
  */
-function getConsommationsFiablesPourPrevision(releves: Releve[]): ConsoEntreReleves[] {
-  return getConsommationsEntreReleves(releves).filter(
+function getConsommationsFiablesPourPrevision(
+  releves: Releve[],
+  mode: CompteurMode = 'prepaye'
+): ConsoEntreReleves[] {
+  return getConsommationsEntreReleves(releves, mode).filter(
     (c) => c.nbJours >= MIN_INTERVAL_JOURS_PREVISION && c.kwhConsommes >= 0 && c.tauxJournalier >= 0
   );
 }
@@ -115,8 +124,12 @@ export function getPrixMoyenArPerKwh(achats: Achat[]): number | null {
   return total / achats.length;
 }
 
-export function getTauxJournalierRecent(releves: Releve[], nbJours = 7): number | null {
-  const consos = getConsommationsEntreReleves(releves).filter((c) => c.kwhConsommes >= 0 && c.tauxJournalier >= 0);
+export function getTauxJournalierRecent(
+  releves: Releve[],
+  nbJours = 7,
+  mode: CompteurMode = 'prepaye'
+): number | null {
+  const consos = getConsommationsEntreReleves(releves, mode).filter((c) => c.kwhConsommes >= 0 && c.tauxJournalier >= 0);
   if (consos.length === 0) return null;
   const now = Date.now();
   const limit = now - nbJours * 24 * 60 * 60 * 1000;
@@ -162,9 +175,12 @@ function getTauxJournalierPondereFromConsos(consos: ConsoEntreReleves[]): number
  * Taux journalier moyen pondéré : 7 derniers jours (0.6) + 30 derniers jours (0.3) + global (0.1).
  * Repli sur les périodes disponibles si pas assez de données.
  */
-export function getTauxJournalierPondere(releves: Releve[]): number | null {
+export function getTauxJournalierPondere(
+  releves: Releve[],
+  mode: CompteurMode = 'prepaye'
+): number | null {
   // On ne veut pas que les achats/recharges (qui augmentent le solde) soient interprétés comme de la consommation.
-  const consos = getConsommationsEntreReleves(releves).filter((c) => c.kwhConsommes >= 0 && c.tauxJournalier >= 0);
+  const consos = getConsommationsEntreReleves(releves, mode).filter((c) => c.kwhConsommes >= 0 && c.tauxJournalier >= 0);
   return getTauxJournalierPondereFromConsos(consos);
 }
 
@@ -196,9 +212,9 @@ function getTendanceConsoFromConsos(
  * Régression linéaire : taux_journalier en fonction du temps (jours depuis premier relevé).
  * Retourne la pente (kWh/j par jour) ou 0 si pas assez de points.
  */
-export function getTendanceConso(releves: Releve[]): number {
+export function getTendanceConso(releves: Releve[], mode: CompteurMode = 'prepaye'): number {
   // Filtre les intervalles qui correspondent à une recharge (solde qui augmente).
-  const consos = getConsommationsEntreReleves(releves).filter((c) => c.kwhConsommes >= 0 && c.tauxJournalier >= 0);
+  const consos = getConsommationsEntreReleves(releves, mode).filter((c) => c.kwhConsommes >= 0 && c.tauxJournalier >= 0);
   const tries = getRelevesTries(releves);
   return getTendanceConsoFromConsos(consos, tries[0]?.date ?? '');
 }
@@ -213,9 +229,12 @@ export function isPrevisionPeuFiable(releves: Releve[]): boolean {
 /**
  * Message d'avertissement quand la prévision est affichée mais peu fiable, ou quand elle est indisponible.
  */
-export function getMessageAvertissementPrevision(releves: Releve[]): string | null {
+export function getMessageAvertissementPrevision(
+  releves: Releve[],
+  mode: CompteurMode = 'prepaye'
+): string | null {
   const spanJours = getSpanHistoriqueJours(releves);
-  const consosFiables = getConsommationsFiablesPourPrevision(releves);
+  const consosFiables = getConsommationsFiablesPourPrevision(releves, mode);
 
   if (releves.length < 2) return null;
   if (spanJours < JOURS_MIN_HISTORIQUE_PREVISION) {
@@ -235,11 +254,14 @@ export function getMessageAvertissementPrevision(releves: Releve[]): string | nu
  * N'utilise que les intervalles >= 6h pour éviter l'extrapolation à partir de snapshots horaires.
  * Retourne null si l'historique couvre moins de 2 jours ou s'il n'y a aucun intervalle fiable.
  */
-export function getTauxJournalierPrediction(releves: Releve[]): number | null {
+export function getTauxJournalierPrediction(
+  releves: Releve[],
+  mode: CompteurMode = 'prepaye'
+): number | null {
   const spanJours = getSpanHistoriqueJours(releves);
   if (spanJours < JOURS_MIN_HISTORIQUE_PREVISION) return null;
 
-  const consosFiables = getConsommationsFiablesPourPrevision(releves);
+  const consosFiables = getConsommationsFiablesPourPrevision(releves, mode);
   if (consosFiables.length === 0) return null;
 
   const tauxPondere = getTauxJournalierPondereFromConsos(consosFiables);
@@ -253,8 +275,11 @@ export function getTauxJournalierPrediction(releves: Releve[]): number | null {
 }
 
 /** Marge relative pour l'intervalle de confiance (écart-type des taux ou 15 % par défaut). Utilise les intervalles >= 6h pour éviter une bande trop large. */
-export function getMargeIntervalleConfiance(releves: Releve[]): number {
-  const consos = getConsommationsFiablesPourPrevision(releves);
+export function getMargeIntervalleConfiance(
+  releves: Releve[],
+  mode: CompteurMode = 'prepaye'
+): number {
+  const consos = getConsommationsFiablesPourPrevision(releves, mode);
   if (consos.length < 2) return 0.15;
   const tauxPondere = getTauxJournalierPondereFromConsos(consos) ?? 0;
   if (tauxPondere <= 0) return 0.15;
@@ -328,11 +353,12 @@ export function getDonneesGraphiqueSolde(releves: Releve[]): { date: string; sol
  * Retourne les points de la courbe de prévision d'épuisement (taux pondéré × tendance).
  */
 export function getDonneesPrevisionSolde(
-  releves: Releve[]
+  releves: Releve[],
+  mode: CompteurMode = 'prepaye'
 ): { date: string; solde: number }[] {
   const tries = getRelevesTries(releves);
   if (tries.length === 0) return [];
-  const taux = getTauxJournalierPrediction(releves);
+  const taux = getTauxJournalierPrediction(releves, mode);
   if (taux == null || taux <= 0) return [];
   const dernier = tries[tries.length - 1];
   const result: { date: string; solde: number }[] = [];
@@ -353,11 +379,12 @@ export function getDonneesPrevisionSolde(
  * Retourne la prévision avec intervalle de confiance (min/max) pour la bande grisée.
  */
 export function getDonneesPrevisionAvecIntervalle(
-  releves: Releve[]
+  releves: Releve[],
+  mode: CompteurMode = 'prepaye'
 ): { date: string; solde: number; soldeMin: number; soldeMax: number }[] {
-  const taux = getTauxJournalierPrediction(releves);
+  const taux = getTauxJournalierPrediction(releves, mode);
   if (taux == null || taux <= 0) return [];
-  return getDonneesPrevisionAvecIntervalleFromTaux(releves, taux);
+  return getDonneesPrevisionAvecIntervalleFromTaux(releves, taux, mode);
 }
 
 /**
@@ -365,11 +392,12 @@ export function getDonneesPrevisionAvecIntervalle(
  */
 export function getDonneesPrevisionAvecIntervalleFromTaux(
   releves: Releve[],
-  tauxJournalier: number
+  tauxJournalier: number,
+  mode: CompteurMode = 'prepaye'
 ): { date: string; solde: number; soldeMin: number; soldeMax: number }[] {
   const tries = getRelevesTries(releves);
   if (tries.length === 0 || tauxJournalier <= 0) return [];
-  const marge = getMargeIntervalleConfiance(releves);
+  const marge = getMargeIntervalleConfiance(releves, mode);
   const tauxMin = tauxJournalier * (1 - marge);
   const tauxMax = tauxJournalier * (1 + marge);
   const dernier = tries[tries.length - 1];
@@ -400,8 +428,11 @@ export function getDonneesPrevisionAvecIntervalleFromTaux(
  * Données du graphique de consommation, regroupées par jour calendaire
  * (plusieurs intervalles entre relevés le même jour sont additionnés).
  */
-export function getDonneesGraphiqueConso(releves: Releve[]): { label: string; conso: number; dateIso: string }[] {
-  const consos = getConsommationsEntreReleves(releves).filter((c) => c.kwhConsommes >= 0 && c.tauxJournalier >= 0);
+export function getDonneesGraphiqueConso(
+  releves: Releve[],
+  mode: CompteurMode = 'prepaye'
+): { label: string; conso: number; dateIso: string }[] {
+  const consos = getConsommationsEntreReleves(releves, mode).filter((c) => c.kwhConsommes >= 0 && c.tauxJournalier >= 0);
   const parJour = new Map<string, number>();
   for (const c of consos) {
     const d = new Date(dateStrToLocalEndOfDayMs(c.dateFin));

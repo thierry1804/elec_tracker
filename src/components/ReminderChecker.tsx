@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
 import { usePrevision } from '../context/PrevisionContext';
 import { useApp } from '../context/AppContext';
-import { tryShowReminder, tryShowReminderHabit } from '../lib/reminders';
+import { getRelevesTries } from '../lib/calculs';
+import { getJoursDepuisReleve, useCompteurMode } from '../lib/compteurMode';
+import { tryShowReminder, tryShowReminderHabit, tryShowReminderPostpaye } from '../lib/reminders';
 import { getRechargeTypique } from '../lib/analytics';
 
 /**
@@ -12,15 +14,21 @@ import { getRechargeTypique } from '../lib/analytics';
 export default function ReminderChecker() {
   const { joursRestants } = usePrevision();
   const { data } = useApp();
+  const mode = useCompteurMode();
+  const tries = getRelevesTries(data.releves);
+  const dernier = tries.length > 0 ? tries[tries.length - 1] : undefined;
+  const joursDepuis = getJoursDepuisReleve(dernier?.date);
 
   useEffect(() => {
-    tryShowReminder(joursRestants ?? null);
-  }, [joursRestants]);
+    if (mode === 'postpaye') tryShowReminderPostpaye(joursDepuis);
+    else tryShowReminder(joursRestants ?? null);
+  }, [mode, joursRestants, joursDepuis]);
 
   useEffect(() => {
+    if (mode === 'postpaye') return;
     const recharge = getRechargeTypique(data.achats);
     tryShowReminderHabit(recharge?.prochaineRechargeHabitude ?? null);
-  }, [data.achats]);
+  }, [mode, data.achats]);
 
   return null;
 }

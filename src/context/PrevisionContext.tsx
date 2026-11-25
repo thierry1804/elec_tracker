@@ -5,7 +5,7 @@ import {
   useState,
   useEffect,
 } from 'react';
-import type { Releve } from '../types';
+import type { Releve, CompteurMode } from '../types';
 import {
   getRelevesTries,
   getTauxJournalierPrediction,
@@ -17,6 +17,7 @@ import {
 } from '../lib/calculs';
 import { useEmbeddedAi } from './EmbeddedAiContext';
 import { buildFullAiContext } from '../lib/ai/buildContext';
+import { useCompteurMode } from '../lib/compteurMode';
 
 export interface PrevisionResult {
   tauxJournalier: number | null;
@@ -30,25 +31,38 @@ export interface PrevisionResult {
   error: string | null;
 }
 
-function computeFallback(releves: Releve[]): PrevisionResult {
+function sansEpuisement(result: PrevisionResult, mode: CompteurMode): PrevisionResult {
+  if (mode !== 'postpaye') return result;
+  return {
+    ...result,
+    dateEpuisement: null,
+    joursRestants: null,
+    prochainAchatDate: null,
+    kwhAchatSuggere: null,
+    donneesPrevision: [],
+  };
+}
+
+function computeFallback(releves: Releve[], mode: CompteurMode): PrevisionResult {
   const tries = getRelevesTries(releves);
   const dernier = tries[tries.length - 1];
   const creditRestant = dernier?.creditRestantKwh ?? 0;
   const dateDernierReleve = dernier?.date;
 
-  const tauxJournalier = getTauxJournalierPrediction(releves);
+  const tauxJournalier = getTauxJournalierPrediction(releves, mode);
   const dateEpuisement =
+    mode === 'prepaye' &&
     tauxJournalier != null &&
     tauxJournalier > 0 &&
     dateDernierReleve
       ? getDateEpuisementEstimee(creditRestant, tauxJournalier, dateDernierReleve)
       : null;
-  const joursRestants = getJoursRestants(dateEpuisement);
-  const prochainAchatDate = getProchainAchatSuggere(dateEpuisement);
-  const kwhAchatSuggere = getKwhAchatSuggere(tauxJournalier);
+  const joursRestants = mode === 'prepaye' ? getJoursRestants(dateEpuisement) : null;
+  const prochainAchatDate = mode === 'prepaye' ? getProchainAchatSuggere(dateEpuisement) : null;
+  const kwhAchatSuggere = mode === 'prepaye' ? getKwhAchatSuggere(tauxJournalier) : null;
   const donneesPrevision =
-    tauxJournalier != null && tauxJournalier > 0
-      ? getDonneesPrevisionAvecIntervalleFromTaux(releves, tauxJournalier)
+    mode === 'prepaye' && tauxJournalier != null && tauxJournalier > 0
+      ? getDonneesPrevisionAvecIntervalleFromTaux(releves, tauxJournalier, mode)
       : [];
 
   return {
@@ -67,11 +81,29 @@ function computeFallback(releves: Releve[]): PrevisionResult {
 function buildFromTaux(
   releves: Releve[],
   tauxJournalier: number,
-  source: 'ai' | 'fallback'
+  source: 'ai' | 'fallback',
+  mode: CompteurMode
 ): PrevisionResult {
   const tries = getRelevesTries(releves);
   const dernier = tries[tries.length - 1];
-  if (!dernier) return computeFallback(releves);
+  if (!dernier) return computeFallback(releves, mode);
+
+  if (mode === 'postpaye') {
+    return sansEpuisement(
+      {
+        tauxJournalier,
+        dateEpuisement: null,
+        joursRestants: null,
+        prochainAchatDate: null,
+        kwhAchatSuggere: null,
+        donneesPrevision: [],
+        source,
+        loading: false,
+        error: null,
+      },
+      mode
+    );
+  }
 
   const dateEpuisement = getDateEpuisementEstimee(
     dernier.creditRestantKwh,
@@ -83,7 +115,8 @@ function buildFromTaux(
   const kwhAchatSuggere = getKwhAchatSuggere(tauxJournalier);
   const donneesPrevision = getDonneesPrevisionAvecIntervalleFromTaux(
     releves,
-    tauxJournalier
+    tauxJournalier,
+    mode
   );
 
   return {
@@ -111,11 +144,12 @@ export function PrevisionProvider({
   children: React.ReactNode;
 }) {
   const { isReady, runTask } = useEmbeddedAi();
-  const fallback = useMemo(() => computeFallback(releves), [releves]);
+  const mode = useCompteurMode();
+  const fallback = useMemo(() => computeFallback(releves, mode), [releves, mode]);
   const [result, setResult] = useState<PrevisionResult>(fallback);
 
   useEffect(() => {
-    const fallbackResult = computeFallback(releves);
+    const fallbackResult = computeFallback(releves, mode);
 
     if (!isReady || releves.length < 2) {
       setResult({ ...fallbackResult, loading: false, error: null });
@@ -126,28 +160,28 @@ export function PrevisionProvider({
 
     const controller = new AbortController();
     const { signal } = controller;
-    const context = buildFullAiContext({ releves, achats }, fallbackResult);
+    const context = buildFullAiContext({ releves, achats }, fallbackResult, mode);
 
     runTask('prevision', context, signal)
       .then((taskResult) => {
         if (signal.aborted) return;
         if (taskResult?.task === 'prevision' && taskResult.tauxJournalier > 0) {
-          setResult(buildFromTaux(releves, taskResult.tauxJournalier, 'ai'));
+          setResult(buildFromTaux(releves, taskResult.tauxJournalier, 'ai', mode));
         } else {
-          setResult({ ...computeFallback(releves), loading: false, error: null });
+          setResult({ ...computeFallback(releves, mode), loading: false, error: null });
         }
       })
       .catch(() => {
         if (signal.aborted) return;
         setResult({
-          ...computeFallback(releves),
+          ...computeFallback(releves, mode),
           loading: false,
           error: 'Assistant local indisponible',
         });
       });
 
     return () => controller.abort();
-  }, [releves, achats, isReady, runTask]);
+  }, [releves, achats, isReady, runTask, mode]);
 
   const value = useMemo(() => result, [result]);
 

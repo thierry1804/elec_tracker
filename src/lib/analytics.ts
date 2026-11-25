@@ -1,4 +1,4 @@
-import type { Achat, Releve } from '../types';
+import type { Achat, CompteurMode, Releve } from '../types';
 import {
   getConsommationsEntreReleves,
   getTauxJournalierPondere,
@@ -77,9 +77,10 @@ export interface KwhCoutParMois {
  */
 export function getKwhEtCoutParMois(
   releves: Releve[],
-  achats: Achat[]
+  achats: Achat[],
+  mode: CompteurMode = 'prepaye'
 ): KwhCoutParMois[] {
-  const consos = getConsommationsEntreReleves(releves);
+  const consos = getConsommationsEntreReleves(releves, mode);
   const kwhParMois = new Map<string, number>();
   for (const c of consos) {
     const rep = repartirKwhParMois(
@@ -117,9 +118,10 @@ export interface ComparaisonMois {
 
 export function getComparaisonCeMoisVsDernier(
   releves: Releve[],
-  achats: Achat[]
+  achats: Achat[],
+  mode: CompteurMode = 'prepaye'
 ): ComparaisonMois | null {
-  const parMois = getKwhEtCoutParMois(releves, achats);
+  const parMois = getKwhEtCoutParMois(releves, achats, mode);
   if (parMois.length < 2) return null;
   const now = new Date();
   const ceMois = getMoisKey(now);
@@ -197,8 +199,11 @@ export function getComparaisonPrixMoyenCeMoisVsDernier(
  * « conso réelle » vs moyenne de la **seconde moitié** (toujours dans la fenêtre 30 j., sans segments recharge).
  * Plus stable que comparer seulement le 1er et le dernier relevé.
  */
-export function getTendanceConsoEvolutionPct30j(releves: Releve[]): number | null {
-  const consos = getConsommationsEntreReleves(releves);
+export function getTendanceConsoEvolutionPct30j(
+  releves: Releve[],
+  mode: CompteurMode = 'prepaye'
+): number | null {
+  const consos = getConsommationsEntreReleves(releves, mode);
   if (consos.length < 2) return null;
   const now = Date.now();
   const limit30 = now - 30 * MS_PAR_JOUR;
@@ -223,9 +228,10 @@ export function getTendanceConsoEvolutionPct30j(releves: Releve[]): number | nul
 
 /** Indicateur tendance : baisse | stable | hausse selon évolution % sur 30 j. */
 export function getTendanceConsoIndicateur(
-  releves: Releve[]
+  releves: Releve[],
+  mode: CompteurMode = 'prepaye'
 ): { indicateur: 'baisse' | 'stable' | 'hausse'; evolutionPct: number | null } {
-  const evolutionPct = getTendanceConsoEvolutionPct30j(releves);
+  const evolutionPct = getTendanceConsoEvolutionPct30j(releves, mode);
   if (evolutionPct === null) return { indicateur: 'stable', evolutionPct: null };
   const seuil = 5;
   if (evolutionPct <= -seuil) return { indicateur: 'baisse', evolutionPct };
@@ -241,9 +247,10 @@ export interface ResuméPeriode {
 /** Cette semaine (7 derniers jours) et ce mois (mois en cours). */
 export function getResumeHebdoEtMensuel(
   releves: Releve[],
-  achats: Achat[]
+  achats: Achat[],
+  mode: CompteurMode = 'prepaye'
 ): { semaine: ResuméPeriode; mois: ResuméPeriode } {
-  const consos = getConsommationsEntreReleves(releves);
+  const consos = getConsommationsEntreReleves(releves, mode);
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   const limit7 = now.getTime() - 7 * MS_PAR_JOUR;
@@ -303,14 +310,15 @@ export interface PrevisionAnnuelle {
 
 export function getPrevisionAnnuelle(
   releves: Releve[],
-  achats: Achat[]
+  achats: Achat[],
+  mode: CompteurMode = 'prepaye'
 ): PrevisionAnnuelle | null {
-  const taux = getTauxJournalierPondere(releves);
+  const taux = getTauxJournalierPondere(releves, mode);
   const prixMoyen = getPrixMoyenArPerKwh(achats);
   if (taux == null || taux <= 0 || prixMoyen == null) return null;
   const coutMensuel = getCoutMensuelEstime(taux, prixMoyen);
   const coutAnnuel = Math.round(coutMensuel * 12);
-  const consos = getConsommationsEntreReleves(releves);
+  const consos = getConsommationsEntreReleves(releves, mode);
   let ecartType = 0.15;
   if (consos.length >= 2) {
     const tauxMoy = consos.reduce((s, c) => s + c.tauxJournalier, 0) / consos.length;
@@ -334,9 +342,10 @@ export function getPrevisionAnnuelle(
 export function getEconomieMensuelleSiReduction(
   releves: Releve[],
   achats: Achat[],
-  pctReduction = 10
+  pctReduction = 10,
+  mode: CompteurMode = 'prepaye'
 ): number | null {
-  const taux = getTauxJournalierPondere(releves);
+  const taux = getTauxJournalierPondere(releves, mode);
   const prixMoyen = getPrixMoyenArPerKwh(achats);
   if (taux == null || taux <= 0 || prixMoyen == null) return null;
   const coutActuel = getCoutMensuelEstime(taux, prixMoyen);
@@ -380,8 +389,11 @@ export interface AnomalieConso {
 
 const SEUIL_RATIO_PIC = 1.5;
 
-export function getAnomalieConsommation(releves: Releve[]): AnomalieConso | null {
-  const consos = getConsommationsEntreReleves(releves);
+export function getAnomalieConsommation(
+  releves: Releve[],
+  mode: CompteurMode = 'prepaye'
+): AnomalieConso | null {
+  const consos = getConsommationsEntreReleves(releves, mode);
   if (consos.length < 2) return null;
   const now = Date.now();
   const limit7 = now - 7 * MS_PAR_JOUR;
@@ -423,9 +435,10 @@ export interface Saisonnalite {
  */
 export function getSaisonnalite(
   releves: Releve[],
-  _achats: Achat[]
+  _achats: Achat[],
+  mode: CompteurMode = 'prepaye'
 ): Saisonnalite | null {
-  const parMois = getKwhEtCoutParMois(releves, []);
+  const parMois = getKwhEtCoutParMois(releves, [], mode);
   const byMonth = new Map<number, number[]>();
   for (const p of parMois) {
     const [, m] = p.mois.split('-').map(Number);

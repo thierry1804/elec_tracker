@@ -1,4 +1,4 @@
-import type { Achat, Releve } from '../types';
+import type { Achat, CompteurMode, Releve } from '../types';
 import { getRelevesTries, getConsommationsEntreReleves } from './calculs';
 
 const CSV_SEP = ';';
@@ -44,13 +44,13 @@ function downloadCsv(content: string, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-export function exportRelevesCSV(releves: Releve[]): void {
+export function exportRelevesCSV(releves: Releve[], mode: CompteurMode = 'prepaye'): void {
   const tries = getRelevesTries(releves);
-  const consos = getConsommationsEntreReleves(releves);
+  const consos = getConsommationsEntreReleves(releves, mode);
 
   const headers = [
     'Date et heure',
-    'Crédit restant (kWh)',
+    mode === 'postpaye' ? 'Index (kWh)' : 'Crédit restant (kWh)',
     'Consommation calculée (kWh)',
     'Durée',
   ];
@@ -72,8 +72,13 @@ export function exportRelevesCSV(releves: Releve[]): void {
   downloadCsv(csv, filename);
 }
 
-export function exportAchatsCSV(achats: Achat[]): void {
-  const headers = ['Date', 'Montant (Ar)', 'Crédit (kWh)', 'Prix unitaire (Ar/kWh)'];
+export function exportAchatsCSV(achats: Achat[], mode: CompteurMode = 'prepaye'): void {
+  const headers = [
+    'Date',
+    'Montant (Ar)',
+    mode === 'postpaye' ? 'kWh facturés' : 'Crédit (kWh)',
+    'Prix unitaire (Ar/kWh)',
+  ];
   const sorted = [...achats].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
@@ -89,6 +94,9 @@ export function exportAchatsCSV(achats: Achat[]): void {
   }
 
   const csv = rows.map((row) => row.join(CSV_SEP)).join('\n');
-  const filename = `electracker-achats-${new Date().toISOString().slice(0, 10)}.csv`;
+  const filename =
+    mode === 'postpaye'
+      ? `electracker-factures-${new Date().toISOString().slice(0, 10)}.csv`
+      : `electracker-achats-${new Date().toISOString().slice(0, 10)}.csv`;
   downloadCsv(csv, filename);
 }

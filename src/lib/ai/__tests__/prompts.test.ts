@@ -24,6 +24,7 @@ const baseContext: FullAiContext = {
   resume: null,
   previsionAnnuelle: null,
   saisonnalite: null,
+  mode: 'prepaye',
 };
 
 describe('buildPrompt', () => {

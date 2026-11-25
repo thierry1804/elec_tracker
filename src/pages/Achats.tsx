@@ -6,11 +6,14 @@ import AchatForm from '../components/AchatForm';
 import DeleteConfirmButton from '../components/DeleteConfirmButton';
 import PrixAchatsChart from '../components/PrixAchatsChart';
 import { IconEdit, IconTrash } from '../components/nav/NavIcons';
+import { labelAchatsNav, labelAchatKwh, useCompteurMode } from '../lib/compteurMode';
 import '../components/Charts.css';
 
 export default function Achats() {
   const { data, deleteAchat, restoreAchat } = useApp();
   const layoutActions = useLayoutActions();
+  const mode = useCompteurMode();
+  const postpaye = mode === 'postpaye';
   const [editingAchatId, setEditingAchatId] = useState<string | null>(null);
   const editingAchat = editingAchatId ? data.achats.find((a) => a.id === editingAchatId) ?? null : null;
   const achats = [...data.achats].sort(
@@ -18,14 +21,14 @@ export default function Achats() {
   );
 
   const showReleveCta = useMemo(() => {
-    if (achats.length === 0) return false;
+    if (postpaye || achats.length === 0) return false;
     const dernierAchat = achats[achats.length - 1];
     const dernierAchatTime = new Date(dernierAchat.date).getTime();
     const releveManuelApres = data.releves.some(
       (r) => !r.fromAchat && new Date(r.date).getTime() > dernierAchatTime
     );
     return !releveManuelApres;
-  }, [achats, data.releves]);
+  }, [postpaye, achats, data.releves]);
 
   const formatDateHeure = (d: string) => {
     const date = new Date(d);
@@ -51,12 +54,14 @@ export default function Achats() {
     return (
       <div className="page achats">
         <div className="page-empty dashboard-empty" role="status">
-          <h2 className="dashboard-empty-title">Achats</h2>
+          <h2 className="dashboard-empty-title">{labelAchatsNav(mode)}</h2>
           <p className="dashboard-empty-text">
-            Aucun achat enregistré. Saisissez montant et crédit reçu à chaque recharge.
+            {postpaye
+              ? 'Aucune facture enregistrée. Saisissez le montant et les kWh facturés.'
+              : 'Aucun achat enregistré. Saisissez montant et crédit reçu à chaque recharge.'}
           </p>
           <button type="button" className="btn btn-primary" onClick={() => layoutActions?.openAchat()}>
-            + Premier achat
+            + {postpaye ? 'Première facture' : 'Premier achat'}
           </button>
         </div>
       </div>
@@ -65,7 +70,10 @@ export default function Achats() {
 
   return (
     <div className="page achats">
-      <PageHeader title="Achats" lead="Recharges enregistrées et prix unitaire." />
+      <PageHeader
+        title={labelAchatsNav(mode)}
+        lead={postpaye ? 'Factures enregistrées et prix unitaire.' : 'Recharges enregistrées et prix unitaire.'}
+      />
       <div className="page-stack">
         {showReleveCta && (
           <div className="alert-banner alert-info alert-banner-row" role="status">
@@ -88,7 +96,7 @@ export default function Achats() {
             <tr>
               <th>Date et heure</th>
               <th>Montant (Ar)</th>
-              <th>Crédit (kWh)</th>
+              <th>{labelAchatKwh(mode)}</th>
               <th>Prix unitaire (Ar/kWh)</th>
               <th aria-label="Actions"></th>
             </tr>
@@ -106,16 +114,16 @@ export default function Achats() {
                       type="button"
                       className="btn-edit btn-edit-icon"
                       onClick={() => setEditingAchatId(a.id)}
-                      title="Modifier cet achat"
-                      aria-label="Modifier cet achat"
+                      title={postpaye ? 'Modifier cette facture' : 'Modifier cet achat'}
+                      aria-label={postpaye ? 'Modifier cette facture' : 'Modifier cet achat'}
                     >
                       <IconEdit />
                     </button>
                     <DeleteConfirmButton
-                      itemLabel="cet achat"
+                      itemLabel={postpaye ? 'cette facture' : 'cet achat'}
                       onConfirm={() => deleteAchat(a.id)}
                       onUndo={() => restoreAchat(a)}
-                      undoMessage="Achat supprimé"
+                      undoMessage={postpaye ? 'Facture supprimée' : 'Achat supprimé'}
                       icon={<IconTrash />}
                     />
                   </div>

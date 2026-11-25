@@ -1,9 +1,11 @@
 import {
   getRelevesTries,
+  getConsommationsEntreReleves,
   getPrixMoyenArPerKwh,
   getCoutMensuelEstime,
   isPrevisionPeuFiable,
 } from '../lib/calculs';
+import { useCompteurMode } from '../lib/compteurMode';
 import type { AppData } from '../types';
 import { useSettings } from '../context/SettingsContext';
 import { usePrevision } from '../context/PrevisionContext';
@@ -27,11 +29,17 @@ interface DashboardCardsProps {
 
 export default function DashboardCards({ data }: DashboardCardsProps) {
   const { releves, achats } = data;
+  const mode = useCompteurMode();
+  const postpaye = mode === 'postpaye';
   const prevision = usePrevision();
   const { tauxJournalier, joursRestants, loading: previsionLoading } = prevision;
   const tries = getRelevesTries(releves);
   const dernierReleve = tries[tries.length - 1];
   const creditRestant = dernierReleve?.creditRestantKwh ?? 0;
+  const consos = getConsommationsEntreReleves(releves, mode);
+  const derniereConso = consos.length > 0 ? consos[consos.length - 1] : null;
+  const kwhDepuis =
+    derniereConso && derniereConso.kwhConsommes >= 0 ? derniereConso.kwhConsommes : null;
   const dateDernierReleve = dernierReleve?.date;
 
   const normalizeDateStrToMsNoon = (value: string): number => {
@@ -44,7 +52,7 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
   const isEmpty = releves.length === 0;
 
   const achatDebug =
-    !isEmpty && achats.length > 0 && tries.length > 0
+    !postpaye && !isEmpty && achats.length > 0 && tries.length > 0
       ? (() => {
           const achatsTries = [...achats].sort(
             (a, b) => normalizeDateStrToMsNoon(a.date) - normalizeDateStrToMsNoon(b.date)
@@ -116,24 +124,34 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
 
   return (
     <div className="dashboard-cards">
-      {/* Hero — Crédit restant */}
+      {/* Hero — crédit restant ou index */}
       <div className="hero-card">
         <div className="hero-top">
           <div>
-            <div className="hero-label">Crédit restant</div>
+            <div className="hero-label">{postpaye ? 'Index' : 'Crédit restant'}</div>
             <div
-              className={`hero-value ${isEmpty ? 'empty' : creditStatus}`}
+              className={`hero-value ${isEmpty ? 'empty' : postpaye ? '' : creditStatus}`}
             >
               {isEmpty ? '—' : creditRestant}
               {!isEmpty && <span className="hero-unit">kWh</span>}
             </div>
             {isEmpty ? (
               <div className="hero-sub">
-                Ajoutez un relevé pour voir votre solde
+                {postpaye
+                  ? "Ajoutez un relevé pour noter l'index"
+                  : 'Ajoutez un relevé pour voir votre solde'}
               </div>
             ) : (
               <div className="hero-sub">
-                {joursRestants != null && joursRestants > 0 ? (
+                {postpaye ? (
+                  kwhDepuis != null ? (
+                    <>
+                      {kwhDepuis.toFixed(1).replace('.', ',')} kWh depuis le relevé précédent
+                    </>
+                  ) : (
+                    <>Index au {dateDernierReleve && formatDate(dateDernierReleve)}</>
+                  )
+                ) : joursRestants != null && joursRestants > 0 ? (
                   <>Prochaine recharge suggérée dans <span>{joursRestants} jour{joursRestants !== 1 ? 's' : ''}</span></>
                 ) : (
                   <>Solde au {dateDernierReleve && formatDate(dateDernierReleve)}</>
@@ -148,6 +166,7 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
               </div>
             )}
           </div>
+          {!postpaye && (
           <div className="gauge-wrap">
             <ArcGauge
               pct={isEmpty ? 0 : pct}
@@ -155,8 +174,11 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
             />
             <div className="gauge-label">Niveau</div>
           </div>
+          )}
         </div>
 
+        {!postpaye && (
+        <>
         <div className="progress-track">
           <div
             className={`progress-fill ${isEmpty ? 'empty' : creditStatus}`}
@@ -171,20 +193,29 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
             <span>{Math.round(maxCredit)} kWh max</span>
           </div>
         )}
+        </>
+        )}
       </div>
 
       {/* Stats grid */}
       <div className="grid-4">
         <div className="stat-card">
-          <div className="stat-label">Jours restants</div>
+          <div className="stat-label">{postpaye ? 'Depuis le relevé précédent' : 'Jours restants'}</div>
           {isEmpty ? (
             <div className="stat-empty">—</div>
+          ) : postpaye ? (
+            <div className="stat-value stat-value--accent">
+              {kwhDepuis != null ? kwhDepuis.toFixed(1).replace('.', ',') : '—'}
+              {kwhDepuis != null && <span className="stat-unit"> kWh</span>}
+            </div>
           ) : (
             <div className="stat-value stat-value--accent">
               {joursRestants !== null ? joursRestants : '—'}
             </div>
           )}
-          <div className="stat-sub">Estimation au rythme actuel</div>
+          <div className="stat-sub">
+            {postpaye ? 'kWh consommés sur le dernier intervalle' : 'Estimation au rythme actuel'}
+          </div>
         </div>
 
         <div className="stat-card">
@@ -222,7 +253,7 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
               )}
             </div>
           )}
-          <div className="stat-sub">Tous achats confondus</div>
+          <div className="stat-sub">{postpaye ? 'Toutes factures confondues' : 'Tous achats confondus'}</div>
         </div>
 
         <div className="stat-card">

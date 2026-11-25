@@ -6,6 +6,7 @@ import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { useModalA11y } from '../hooks/useModalA11y';
 import type { Achat } from '../types';
+import { labelAchatKwh, labelNouvelAchat, useCompteurMode } from '../lib/compteurMode';
 import './Modal.css';
 
 interface AchatFormProps {
@@ -57,6 +58,8 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
   const { showToast } = useToast();
   const modalRef = useModalA11y(onClose);
   const isEdit = !!achat;
+  const mode = useCompteurMode();
+  const postpaye = mode === 'postpaye';
   const [dateIso, setDateIso] = useState('');
   const [timeStr, setTimeStr] = useState('');
   const [montantAr, setMontantAr] = useState('');
@@ -105,9 +108,14 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
     else if (!Number.isFinite(montant)) nextErrors.montantAr = 'Saisissez un nombre.';
     else if (montant <= 0) nextErrors.montantAr = 'Le montant doit être supérieur à 0.';
     const kwh = parseFloat(creditKwh.replace(',', '.'));
-    if (creditKwh.trim() === '') nextErrors.creditKwh = 'Le crédit est requis.';
-    else if (!Number.isFinite(kwh)) nextErrors.creditKwh = 'Saisissez un nombre.';
-    else if (kwh <= 0) nextErrors.creditKwh = 'Le crédit doit être supérieur à 0.';
+    if (creditKwh.trim() === '') {
+      nextErrors.creditKwh = postpaye ? 'Les kWh facturés sont requis.' : 'Le crédit est requis.';
+    } else if (!Number.isFinite(kwh)) nextErrors.creditKwh = 'Saisissez un nombre.';
+    else if (kwh <= 0) {
+      nextErrors.creditKwh = postpaye
+        ? 'Les kWh facturés doivent être supérieurs à 0.'
+        : 'Le crédit doit être supérieur à 0.';
+    }
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       return;
@@ -120,11 +128,19 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
 
     if (achat) {
       updateAchat(achat.id, { date: dateIsoAvecHeure, montantAr: montant, creditKwh: kwh });
-      showToast({ message: `Achat modifié · ${montant.toLocaleString('fr-FR')} Ar` });
+      showToast({
+        message: postpaye
+          ? `Facture modifiée · ${montant.toLocaleString('fr-FR')} Ar`
+          : `Achat modifié · ${montant.toLocaleString('fr-FR')} Ar`,
+      });
       onClose();
     } else {
       addAchat(dateIsoAvecHeure, montant, kwh);
-      showToast({ message: `Achat enregistré · ${kwh} kWh pour ${montant.toLocaleString('fr-FR')} Ar` });
+      showToast({
+        message: postpaye
+          ? `Facture enregistrée · ${kwh} kWh pour ${montant.toLocaleString('fr-FR')} Ar`
+          : `Achat enregistré · ${kwh} kWh pour ${montant.toLocaleString('fr-FR')} Ar`,
+      });
       onClose();
     }
   };
@@ -143,7 +159,7 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
     <div className="modal-overlay modal-sheet-overlay" onClick={onClose} role="presentation">
       <div className="modal modal-sheet" ref={modalRef} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
-          <h2>{isEdit ? "Modifier l'achat" : 'Nouvel achat'}</h2>
+          <h2>{isEdit ? (postpaye ? 'Modifier la facture' : "Modifier l'achat") : labelNouvelAchat(mode)}</h2>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Fermer">
             ×
           </button>
@@ -151,11 +167,15 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="modal-body">
           {!isEdit && (
-            <p className="modal-form-hint">Montant payé et crédit reçu (facture ou SMS opérateur).</p>
+            <p className="modal-form-hint">
+              {postpaye
+                ? 'Montant de la facture et kWh facturés.'
+                : 'Montant payé et crédit reçu (facture ou SMS opérateur).'}
+            </p>
           )}
           <div className="modal-field-row">
           <div className="modal-field">
-            <label htmlFor="achat-date">Date de l'achat</label>
+            <label htmlFor="achat-date">{postpaye ? 'Date de la facture' : "Date de l'achat"}</label>
             <DatePicker
               id="achat-date"
               selected={selectedDate}
@@ -221,7 +241,7 @@ export default function AchatForm({ onClose, achat }: AchatFormProps) {
             )}
           </div>
           <div className="modal-field">
-            <label htmlFor="achat-credit">Crédit ajouté (kWh)</label>
+            <label htmlFor="achat-credit">{labelAchatKwh(mode)}</label>
             <input
               id="achat-credit"
               type="text"

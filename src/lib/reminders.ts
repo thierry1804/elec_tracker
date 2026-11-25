@@ -76,6 +76,29 @@ export function tryShowReminder(joursRestants: number | null): void {
   }
 }
 
+/**
+ * Rappel postpayé : le dernier relevé d'index dépasse le délai configuré.
+ */
+export function tryShowReminderPostpaye(joursDepuis: number | null): void {
+  const settings = loadReminderSettings();
+  if (!settings.enabled || joursDepuis === null) return;
+  if (joursDepuis < settings.daysBefore) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  const today = new Date().toISOString().slice(0, 10);
+  if (getLastNotifiedDate() === today) return;
+
+  try {
+    new Notification("ElecTracker : Relevez l'index", {
+      body: `Dernier relevé il y a ${joursDepuis} jour${joursDepuis !== 1 ? 's' : ''}. Notez l'index du compteur.`,
+      icon: '/favicon.svg',
+    });
+    setLastNotifiedToday();
+  } catch {
+    // ignore
+  }
+}
+
 function getLastNotifiedHabitDate(): string | null {
   return localStorage.getItem(LAST_NOTIFIED_HABIT_KEY);
 }

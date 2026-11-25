@@ -13,6 +13,7 @@ import { LayoutActionsProvider } from '../context/LayoutContext';
 import { PrevisionProvider } from '../context/PrevisionContext';
 import { useApp } from '../context/AppContext';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { labelAchatAction, labelAchatsNav, labelModeBadge, useCompteurMode } from '../lib/compteurMode';
 import {
   IconAchats,
   IconAchat,
@@ -30,15 +31,11 @@ const formatDateLong = (d: Date) =>
 const formatDateShort = (d: Date) =>
   d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-const navItems = [
-  { to: '/', end: true, label: 'Dashboard', Icon: IconDashboard },
-  { to: '/releves', label: 'Relevés', Icon: IconReleves },
-  { to: '/achats', label: 'Achats', Icon: IconAchats },
-  { to: '/parametres', label: 'Paramètres', Icon: IconParametres },
-] as const;
-
 export default function Layout() {
   const { data } = useApp();
+  const mode = useCompteurMode();
+  const achatsLabel = labelAchatsNav(mode);
+  const achatLabel = labelAchatAction(mode);
   const [showReleve, setShowReleve] = useState(false);
   const [showAchat, setShowAchat] = useState(false);
 
@@ -59,6 +56,13 @@ export default function Layout() {
   const dateLong = formatDateLong(today);
   const dateShort = formatDateShort(today);
 
+  const navItems = [
+    { to: '/', end: true, label: 'Dashboard', Icon: IconDashboard },
+    { to: '/releves', label: 'Relevés', Icon: IconReleves },
+    { to: '/achats', label: achatsLabel, Icon: IconAchats },
+    { to: '/parametres', label: 'Paramètres', Icon: IconParametres },
+  ] as const;
+
   return (
     <PrevisionProvider releves={data.releves} achats={data.achats}>
       <ReminderChecker />
@@ -72,7 +76,7 @@ export default function Layout() {
                     <IconBolt />
                   </div>
                   <span className="logo-name">ElecTracker</span>
-                  <span className="badge-prepaye badge-prepaye-full">PRÉPAYÉ</span>
+                  <span className="badge-prepaye badge-prepaye-full">{labelModeBadge(mode)}</span>
                   <CompteurSwitcher />
                 </div>
                 <time className="date date-long" dateTime={today.toISOString()}>
@@ -104,7 +108,7 @@ export default function Layout() {
                   </button>
                   <button type="button" className="btn btn-primary btn-labeled" onClick={openAchat}>
                     <IconAchat />
-                    <span>Achat</span>
+                    <span>{achatLabel}</span>
                   </button>
                 </div>
               </div>

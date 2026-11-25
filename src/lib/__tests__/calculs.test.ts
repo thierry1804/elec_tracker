@@ -3,6 +3,7 @@ import {
   getRelevesTries,
   getConsommationsEntreReleves,
   getPrixMoyenArPerKwh,
+  getTauxJournalierPondere,
   getCoutMensuelEstime,
   isAlerteCreditFaible,
   getJoursRestants,
@@ -46,6 +47,26 @@ describe('getConsommationsEntreReleves', () => {
 
   it('returns empty for single releve', () => {
     expect(getConsommationsEntreReleves([releves[0]])).toEqual([]);
+  });
+
+  it('postpayé : index actuel moins index précédent', () => {
+    const index: Releve[] = [
+      { id: 'i1', date: '2025-02-01T12:00:00.000Z', creditRestantKwh: 1000 },
+      { id: 'i2', date: '2025-02-11T12:00:00.000Z', creditRestantKwh: 1012 },
+    ];
+    const consos = getConsommationsEntreReleves(index, 'postpaye');
+    expect(consos).toHaveLength(1);
+    expect(consos[0].kwhConsommes).toBe(12);
+  });
+
+  it('postpayé : index qui baisse est exclu du taux', () => {
+    const index: Releve[] = [
+      { id: 'i1', date: '2025-02-01T12:00:00.000Z', creditRestantKwh: 1000 },
+      { id: 'i2', date: '2025-02-11T12:00:00.000Z', creditRestantKwh: 990 },
+    ];
+    const consos = getConsommationsEntreReleves(index, 'postpaye');
+    expect(consos[0].kwhConsommes).toBe(-10);
+    expect(getTauxJournalierPondere(index, 'postpaye')).toBeNull();
   });
 });
 

@@ -7,24 +7,26 @@ export interface AiPromptMessages {
   user: string;
 }
 
-const SYSTEM_BASE = `Tu es un assistant pour ElecTracker, une app de suivi d'électricité prépayée à Madagascar.
+const SYSTEM_BASE = `Tu es un assistant pour ElecTracker, une app de suivi d'électricité à Madagascar.
 Réponds en français, ton direct et sobre, sans jargon.
 Réponds UNIQUEMENT par un objet JSON valide, sans texte avant ou après.`;
 
-function formatPrevisionUser(ctx: PrevisionAiContext): string {
-  return `Historique des relevés (date, solde en kWh) :
+function formatPrevisionUser(ctx: PrevisionAiContext, postpaye: boolean): string {
+  const valeur = postpaye ? 'index cumulé en kWh' : 'solde en kWh';
+  return `Historique des relevés (date, ${valeur}) :
 ${ctx.releves.map((r) => `- ${r.date}: ${r.creditRestantKwh} kWh`).join('\n')}
 
 Consommations entre relevés (date fin, kWh consommés, nb jours, taux kWh/jour) :
 ${ctx.consos.map((c) => `- ${c.dateFin}: ${c.kwhConsommes.toFixed(2)} kWh en ${c.nbJours.toFixed(2)} j (≈ ${c.tauxJournalier.toFixed(2)} kWh/j)`).join('\n')}
 
-Solde actuel : ${ctx.creditActuel} kWh (relevé du ${ctx.dateDernierReleve}).
-Estime le taux journalier (kWh/jour) pour prévoir la date d'épuisement.`;
+${postpaye ? 'Index actuel' : 'Solde actuel'} : ${ctx.creditActuel} kWh (relevé du ${ctx.dateDernierReleve}).
+Estime le taux journalier (kWh/jour)${postpaye ? ' à partir de la hausse d\'index.' : " pour prévoir la date d'épuisement."}`;
 }
 
 function formatFullContext(ctx: FullAiContext): string {
+  const postpaye = ctx.mode === 'postpaye';
   const lines: string[] = [
-    `Solde : ${ctx.creditRestantKwh} kWh`,
+    `${postpaye ? 'Index' : 'Solde'} : ${ctx.creditRestantKwh} kWh`,
     ctx.tauxJournalierLocal != null ? `Conso. moyenne locale : ${ctx.tauxJournalierLocal.toFixed(2)} kWh/j` : '',
     ctx.joursRestants != null ? `Jours restants estimés : ${ctx.joursRestants}` : '',
     ctx.prixMoyenArPerKwh != null ? `Prix moyen : ${ctx.prixMoyenArPerKwh.toFixed(2)} Ar/kWh` : '',
@@ -68,12 +70,13 @@ function formatFullContext(ctx: FullAiContext): string {
 export function buildPrompt(task: AiTask, ctx: FullAiContext): AiPromptMessages | null {
   if (task === 'prevision') {
     if (!ctx.prevision) return null;
+    const postpaye = ctx.mode === 'postpaye';
     return {
       system: `${SYSTEM_BASE}
-Estime le taux de consommation journalier (kWh/jour) pour un compteur prépayé.
+Estime le taux de consommation journalier (kWh/jour) pour un compteur ${postpaye ? 'postpayé (index cumulé)' : 'prépayé'}.
 Forme exacte : {"tauxJournalier": <nombre décimal>}
 Le taux doit être positif et réaliste (souvent entre 0.5 et 20).`,
-      user: formatPrevisionUser(ctx.prevision),
+      user: formatPrevisionUser(ctx.prevision, postpaye),
     };
   }
 
@@ -89,7 +92,7 @@ Maximum 3 recommandations, phrases courtes.`,
 
   return {
     system: `${SYSTEM_BASE}
-Rédige une synthèse pour un rapport mensuel d'électricité prépayée.
+Rédige une synthèse pour un rapport mensuel d'électricité ${ctx.mode === 'postpaye' ? 'postpayée' : 'prépayée'}.
 Forme exacte : {"synthese": "<2-4 phrases>", "pointsClefs": ["<point 1>", "<point 2>", "<point 3>"]}
 Maximum 5 points clés.`,
     user: `Données du rapport :\n${formatFullContext(ctx)}\n\nRédige la synthèse.`,

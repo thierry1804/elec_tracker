@@ -1,4 +1,4 @@
-import type { AppData, AppSettings, Compteur } from '../types';
+import type { AppData, AppSettings, Compteur, CompteurMode } from '../types';
 
 const STORAGE_KEY = 'electracker_data';
 export const LAST_SAVE_KEY = 'electracker_last_save';
@@ -24,8 +24,14 @@ function normalizeDateStrToNoonIso(value: unknown): unknown {
   return dt.toISOString();
 }
 
+function asCompteurMode(value: unknown): CompteurMode {
+  return value === 'postpaye' ? 'postpaye' : 'prepaye';
+}
+
 export function loadData(): AppData {
   try {
+    const settings = loadSettings();
+    const migrerSoldeAchat = (settings.modePrincipal ?? 'prepaye') === 'prepaye';
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...defaultData };
     const parsed = JSON.parse(raw) as AppData;
@@ -45,10 +51,12 @@ export function loadData(): AppData {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     const datesAchat = new Set(achatsNorm.map((a) => a.date));
-    const relevesAvecOrigine = relevesNorm.map((r) => ({
-      ...r,
-      fromAchat: Boolean(r.fromAchat) || datesAchat.has(r.date),
-    }));
+    const relevesAvecOrigine = migrerSoldeAchat
+      ? relevesNorm.map((r) => ({
+          ...r,
+          fromAchat: Boolean(r.fromAchat) || datesAchat.has(r.date),
+        }))
+      : relevesNorm;
 
     // Migration de cohérence solde:
     // pour chaque achat, le relevé "juste après" le dernier relevé <= date d'achat
@@ -59,27 +67,29 @@ export function loadData(): AppData {
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
-    for (const achat of achatsNorm) {
-      const achatTimeMs = new Date(achat.date).getTime();
-      let baseIndex = -1;
-      for (let i = 0; i < relevesSorted.length; i++) {
-        const t = new Date(relevesSorted[i].date).getTime();
-        if (t <= achatTimeMs) baseIndex = i;
-        else break;
-      }
+    if (migrerSoldeAchat) {
+      for (const achat of achatsNorm) {
+        const achatTimeMs = new Date(achat.date).getTime();
+        let baseIndex = -1;
+        for (let i = 0; i < relevesSorted.length; i++) {
+          const t = new Date(relevesSorted[i].date).getTime();
+          if (t <= achatTimeMs) baseIndex = i;
+          else break;
+        }
 
-      if (baseIndex < 0) continue;
-      const targetIndex = baseIndex + 1;
-      if (targetIndex >= relevesSorted.length) continue;
+        if (baseIndex < 0) continue;
+        const targetIndex = baseIndex + 1;
+        if (targetIndex >= relevesSorted.length) continue;
 
-      const creditBase = relevesSorted[baseIndex].creditRestantKwh;
-      const expected = creditBase + achat.creditKwh;
-      const current = relevesSorted[targetIndex].creditRestantKwh;
-      // On évite d'écraser une saisie utilisateur postérieure (qui aurait plutôt un solde inférieur).
-      // La correction visée correspond à des crédits synthétiques "trop élevés".
-      const TOLERANCE_KWH = 0.01;
-      if (current - expected > TOLERANCE_KWH) {
-        relevesSorted[targetIndex].creditRestantKwh = expected;
+        const creditBase = relevesSorted[baseIndex].creditRestantKwh;
+        const expected = creditBase + achat.creditKwh;
+        const current = relevesSorted[targetIndex].creditRestantKwh;
+        // On évite d'écraser une saisie utilisateur postérieure (qui aurait plutôt un solde inférieur).
+        // La correction visée correspond à des crédits synthétiques "trop élevés".
+        const TOLERANCE_KWH = 0.01;
+        if (current - expected > TOLERANCE_KWH) {
+          relevesSorted[targetIndex].creditRestantKwh = expected;
+        }
       }
     }
 
@@ -131,13 +141,20 @@ export function loadSettings(): AppSettings {
       if (Object.keys(obj).length > 0) out.evenementsParMois = obj;
     }
     if (Array.isArray(parsed.compteurs)) {
-      out.compteurs = (parsed.compteurs as unknown[])
-        .filter((c): c is Compteur =>
-          !!c && typeof c === 'object' && typeof (c as Compteur).id === 'string' && typeof (c as Compteur).nom === 'string'
-        );
+      const compteurs: Compteur[] = [];
+      for (const raw of parsed.compteurs) {
+        if (!raw || typeof raw !== 'object') continue;
+        const c = raw as Record<string, unknown>;
+        if (typeof c.id !== 'string' || typeof c.nom !== 'string') continue;
+        compteurs.push({ id: c.id, nom: c.nom, mode: asCompteurMode(c.mode) });
+      }
+      out.compteurs = compteurs;
     }
     if (typeof parsed.compteurActifId === 'string') {
       out.compteurActifId = parsed.compteurActifId;
+    }
+    if (parsed.modePrincipal === 'prepaye' || parsed.modePrincipal === 'postpaye') {
+      out.modePrincipal = parsed.modePrincipal;
     }
     return out;
   } catch {

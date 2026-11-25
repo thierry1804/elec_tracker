@@ -1,4 +1,4 @@
-import type { AppData } from '../types';
+import type { AppData, CompteurMode } from '../types';
 import type { PrevisionResult } from '../context/PrevisionContext';
 import { getComparaisonPrixMoyenCeMoisVsDernier } from './analytics';
 
@@ -7,7 +7,8 @@ import { getComparaisonPrixMoyenCeMoisVsDernier } from './analytics';
  */
 export function getConseilContextuel(
   data: AppData,
-  prevision: PrevisionResult | null
+  prevision: PrevisionResult | null,
+  mode: CompteurMode = 'prepaye'
 ): string | null {
   const { releves } = data;
   const hasReleves = releves.length > 0;
@@ -15,7 +16,14 @@ export function getConseilContextuel(
   const now = new Date();
   const isVendredi = now.getDay() === 5;
 
-  if (hasReleves && isVendredi && joursRestants != null && joursRestants > 0 && joursRestants <= 3) {
+  if (
+    mode === 'prepaye' &&
+    hasReleves &&
+    isVendredi &&
+    joursRestants != null &&
+    joursRestants > 0 &&
+    joursRestants <= 3
+  ) {
     return 'Rechargez avant le week-end pour éviter la file.';
   }
 

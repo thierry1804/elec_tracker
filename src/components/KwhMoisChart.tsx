@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import type { AppData } from '../types';
 import { getKwhEtCoutParMois } from '../lib/analytics';
+import { useCompteurMode } from '../lib/compteurMode';
 import { useSettings } from '../context/SettingsContext';
 import { formatMontant } from '../lib/format';
 import ChartShell from './ChartShell';
@@ -35,7 +36,8 @@ interface KwhMoisChartProps {
 
 export default function KwhMoisChart({ data }: KwhMoisChartProps) {
   const { settings } = useSettings();
-  const parMois = getKwhEtCoutParMois(data.releves, data.achats);
+  const mode = useCompteurMode();
+  const parMois = getKwhEtCoutParMois(data.releves, data.achats, mode);
 
   if (parMois.length < 2) return null;
 

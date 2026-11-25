@@ -6,6 +6,7 @@ import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext';
 import { useModalA11y } from '../hooks/useModalA11y';
 import type { Releve } from '../types';
+import { labelReleveValeur, useCompteurMode } from '../lib/compteurMode';
 import './Modal.css';
 
 interface ReleveFormProps {
@@ -45,6 +46,8 @@ export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
   const { showToast } = useToast();
   const modalRef = useModalA11y(onClose);
   const isEdit = !!releve;
+  const postpaye = useCompteurMode() === 'postpaye';
+  const valeurLabel = labelReleveValeur(postpaye ? 'postpaye' : 'prepaye');
   const [dateIso, setDateIso] = useState('');
   const [timeStr, setTimeStr] = useState('');
   const [creditRestantKwh, setCreditRestantKwh] = useState('');
@@ -65,9 +68,14 @@ export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
     if (!dateIso || !dateIso.trim()) nextErrors.date = 'La date est requise.';
     if (!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr)) nextErrors.time = "L'heure est requise.";
     const kwh = parseFloat(creditRestantKwh.replace(',', '.'));
-    if (creditRestantKwh.trim() === '') nextErrors.creditRestantKwh = 'Le crédit restant est requis.';
-    else if (!Number.isFinite(kwh)) nextErrors.creditRestantKwh = 'Saisissez un nombre.';
-    else if (kwh < 0) nextErrors.creditRestantKwh = 'Le crédit ne peut pas être négatif.';
+    if (creditRestantKwh.trim() === '') {
+      nextErrors.creditRestantKwh = postpaye ? "L'index est requis." : 'Le crédit restant est requis.';
+    } else if (!Number.isFinite(kwh)) nextErrors.creditRestantKwh = 'Saisissez un nombre.';
+    else if (kwh < 0) {
+      nextErrors.creditRestantKwh = postpaye
+        ? "L'index ne peut pas être négatif."
+        : 'Le crédit ne peut pas être négatif.';
+    }
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       return;
@@ -111,7 +119,11 @@ export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="modal-body">
           {!isEdit && (
-            <p className="modal-form-hint">Lisez le kWh restant affiché sur votre compteur.</p>
+            <p className="modal-form-hint">
+              {postpaye
+                ? "Lisez l'index kWh cumulé affiché sur votre compteur."
+                : 'Lisez le kWh restant affiché sur votre compteur.'}
+            </p>
           )}
           <div className="modal-field-row">
           <div className="modal-field">
@@ -156,7 +168,7 @@ export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
           </div>
           </div>
           <div className="modal-field">
-            <label htmlFor="releve-credit">Crédit restant (kWh)</label>
+            <label htmlFor="releve-credit">{valeurLabel}</label>
             <input
               id="releve-credit"
               type="text"

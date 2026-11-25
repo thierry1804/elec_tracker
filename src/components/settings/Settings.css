@@ -212,10 +212,16 @@
   align-items: center;
 }
 
-.settings-compteur-add .objective-field-input {
-  flex: 1 1 10rem;
-  min-width: 0;
-  max-width: 14rem;
+.settings-compteur-add .settings-compteur-mode,
+.settings-compteur-row .settings-compteur-mode {
+  flex: 0 0 auto;
+  width: 8.5rem;
+  max-width: 8.5rem;
+}
+
+.settings-compteur-type {
+  color: var(--muted);
+  font-size: 0.75rem;
 }
 
 .settings-compteur-list {

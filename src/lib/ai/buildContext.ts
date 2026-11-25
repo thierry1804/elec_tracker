@@ -1,4 +1,4 @@
-import type { Releve } from '../../types';
+import type { AppData, CompteurMode, Releve } from '../../types';
 import {
   getRelevesTries,
   getConsommationsEntreReleves,
@@ -16,7 +16,7 @@ import {
   getSaisonnalite,
 } from '../analytics';
 import type { PrevisionResult } from '../../context/PrevisionContext';
-import type { AppData } from '../../types';
+import { resolveCompteurMode } from '../compteurMode';
 import { loadSettings } from '../storage';
 
 export interface PrevisionAiContext {
@@ -48,12 +48,16 @@ export interface FullAiContext {
   resume: ReturnType<typeof getResumeHebdoEtMensuel> | null;
   previsionAnnuelle: ReturnType<typeof getPrevisionAnnuelle>;
   saisonnalite: ReturnType<typeof getSaisonnalite>;
+  mode: CompteurMode;
 }
 
-export function buildPrevisionContext(releves: Releve[]): PrevisionAiContext | null {
+export function buildPrevisionContext(
+  releves: Releve[],
+  mode: CompteurMode = 'prepaye'
+): PrevisionAiContext | null {
   const tries = getRelevesTries(releves);
   if (tries.length === 0) return null;
-  const consos = getConsommationsEntreReleves(releves);
+  const consos = getConsommationsEntreReleves(releves, mode);
   const dernier = tries[tries.length - 1];
   return {
     releves: tries.map((r) => ({ date: r.date, creditRestantKwh: r.creditRestantKwh })),
@@ -70,22 +74,24 @@ export function buildPrevisionContext(releves: Releve[]): PrevisionAiContext | n
 
 export function buildFullAiContext(
   data: AppData,
-  prevision: PrevisionResult | null
+  prevision: PrevisionResult | null,
+  mode?: CompteurMode
 ): FullAiContext {
   const { releves, achats } = data;
   const tries = getRelevesTries(releves);
   const dernier = tries[tries.length - 1];
-  const tauxLocal = getTauxJournalierPondere(releves);
+  const settings = loadSettings();
+  const modeActif = mode ?? resolveCompteurMode(settings);
+  const tauxLocal = getTauxJournalierPondere(releves, modeActif);
   const prixMoyen = getPrixMoyenArPerKwh(achats);
   const coutMensuel =
     tauxLocal != null && prixMoyen != null ? getCoutMensuelEstime(tauxLocal, prixMoyen) : null;
-  const settings = loadSettings();
   const now = new Date();
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const anomalie = getAnomalieConsommation(releves);
+  const anomalie = getAnomalieConsommation(releves, modeActif);
 
   return {
-    prevision: buildPrevisionContext(releves),
+    prevision: buildPrevisionContext(releves, modeActif),
     creditRestantKwh: dernier?.creditRestantKwh ?? 0,
     tauxJournalierLocal: tauxLocal,
     joursRestants: prevision?.joursRestants ?? null,
@@ -102,12 +108,13 @@ export function buildFullAiContext(
           ratio: anomalie.ratio,
         }
       : null,
-    comparaisonMois: getComparaisonCeMoisVsDernier(releves, achats),
+    comparaisonMois: getComparaisonCeMoisVsDernier(releves, achats, modeActif),
     prixComparaison: getComparaisonPrixMoyenCeMoisVsDernier(achats),
-    tendance: getTendanceConsoIndicateur(releves),
-    resume: releves.length >= 1 ? getResumeHebdoEtMensuel(releves, achats) : null,
-    previsionAnnuelle: getPrevisionAnnuelle(releves, achats),
-    saisonnalite: getSaisonnalite(releves, achats),
+    tendance: getTendanceConsoIndicateur(releves, modeActif),
+    resume: releves.length >= 1 ? getResumeHebdoEtMensuel(releves, achats, modeActif) : null,
+    previsionAnnuelle: getPrevisionAnnuelle(releves, achats, modeActif),
+    saisonnalite: getSaisonnalite(releves, achats, modeActif),
+    mode: modeActif,
   };
 }
 

@@ -7,7 +7,7 @@ import '../components/settings/Settings.css';
 
 const TAB_LEADS: Record<SettingsTabId, string> = {
   general: 'Thème, unités et affichage des graphiques.',
-  compteurs: 'Gérez plusieurs compteurs prépayés.',
+  compteurs: 'Gérez plusieurs compteurs, prépayés ou postpayés.',
   alertes: 'Rappels, objectifs et notes du mois.',
   donnees: 'Export, import et sauvegarde de vos données.',
   avance: 'Prévision IA optionnelle (clé API).',

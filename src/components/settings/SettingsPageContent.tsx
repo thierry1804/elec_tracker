@@ -3,8 +3,10 @@ import { useSettingsPage, formatLastSave, type SettingsTabId } from '../../hooks
 import { useEmbeddedAi } from '../../context/EmbeddedAiContext';
 import { MODELS } from '../../lib/ai/models';
 import { buildFullAiContext } from '../../lib/ai/buildContext';
-import type { ModelTier } from '../../types';
+import type { CompteurMode, ModelTier } from '../../types';
 import { exportRelevesCSV, exportAchatsCSV } from '../../lib/csvExport';
+import { loadDataForCompteur } from '../../lib/storage';
+import { labelMode, useCompteurMode } from '../../lib/compteurMode';
 import { downloadReportHtml } from '../../lib/reportExport';
 import { downloadReportPdf } from '../../lib/pdfExport';
 import { generateTextSummary, copyToClipboard } from '../../lib/clipboardSummary';
@@ -120,6 +122,9 @@ export interface SettingsPageContentProps {
 export default function SettingsPageContent({ activeTab }: SettingsPageContentProps) {
   const embeddedAi = useEmbeddedAi();
   const [reportLoading, setReportLoading] = useState<'html' | 'pdf' | null>(null);
+  const [newCompteurNom, setNewCompteurNom] = useState('');
+  const [newCompteurMode, setNewCompteurMode] = useState<CompteurMode>('prepaye');
+  const mode = useCompteurMode();
   const {
     data,
     currentSettings,
@@ -303,7 +308,7 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
               Compteur
             </h3>
             <p className="settings-hint settings-hint-inline">
-              Gérez plusieurs compteurs (maison, bureau, etc.).
+              Gérez plusieurs compteurs. Chaque compteur est prépayé ou postpayé.
             </p>
             <div className="ai-settings-fields">
               <div className="ai-field-row">
@@ -316,9 +321,13 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
                     switchCompteur(e.target.value || undefined);
                   }}
                 >
-                  <option value="">Principal (défaut)</option>
+                  <option value="">
+                    Principal ({labelMode(currentSettings.modePrincipal ?? 'prepaye')})
+                  </option>
                   {(currentSettings.compteurs ?? []).map((c) => (
-                    <option key={c.id} value={c.id}>{c.nom}</option>
+                    <option key={c.id} value={c.id}>
+                      {c.nom} ({labelMode(c.mode)})
+                    </option>
                   ))}
                 </select>
               </div>
@@ -328,44 +337,77 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
                   className="objective-field-input"
                   placeholder="Nom du nouveau compteur"
                   id="new-compteur-name"
+                  value={newCompteurNom}
+                  onChange={(e) => setNewCompteurNom(e.target.value)}
                 />
+                <select
+                  id="new-compteur-mode"
+                  className="objective-field-input settings-compteur-mode"
+                  aria-label="Type du nouveau compteur"
+                  value={newCompteurMode}
+                  onChange={(e) =>
+                    setNewCompteurMode(e.target.value === 'postpaye' ? 'postpaye' : 'prepaye')
+                  }
+                >
+                  <option value="prepaye">Prépayé</option>
+                  <option value="postpaye">Postpayé</option>
+                </select>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
                   onClick={() => {
-                    const input = document.getElementById('new-compteur-name') as HTMLInputElement;
-                    const nom = input?.value.trim();
+                    const nom = newCompteurNom.trim();
                     if (!nom) return;
                     const id = `compteur-${Date.now()}`;
-                    const compteurs = [...(currentSettings.compteurs ?? []), { id, nom }];
+                    const compteurs = [
+                      ...(currentSettings.compteurs ?? []),
+                      { id, nom, mode: newCompteurMode },
+                    ];
                     updateSettings({ compteurs });
-                    input.value = '';
+                    setNewCompteurNom('');
+                    setNewCompteurMode('prepaye');
                   }}
                 >
                   + Ajouter
                 </button>
               </div>
-              {(currentSettings.compteurs ?? []).length > 0 && (
-                <div className="settings-compteur-list">
-                  {(currentSettings.compteurs ?? []).map((c) => (
-                    <div key={c.id} className="settings-compteur-row">
-                      <span>{c.nom}</span>
-                      <DeleteConfirmButton
-                        itemLabel={c.nom}
-                        undoMessage={`Compteur « ${c.nom} » supprimé`}
-                        onConfirm={() => {
-                          const compteurs = (currentSettings.compteurs ?? []).filter((x) => x.id !== c.id);
-                          const patch: Partial<typeof currentSettings> = { compteurs };
-                          if (currentSettings.compteurActifId === c.id) patch.compteurActifId = undefined;
-                          updateSettings(patch);
-                          if (currentSettings.compteurActifId === c.id) window.location.reload();
-                        }}
-                        icon={<IconTrash />}
-                      />
-                    </div>
-                  ))}
+              <div className="settings-compteur-list">
+                <div className="settings-compteur-row">
+                  <CompteurModeRow
+                    nom="Principal"
+                    mode={currentSettings.modePrincipal ?? 'prepaye'}
+                    locked={compteurADesDonnees()}
+                    onChange={(next) => updateSettings({ modePrincipal: next })}
+                  />
                 </div>
-              )}
+                {(currentSettings.compteurs ?? []).map((c) => (
+                  <div key={c.id} className="settings-compteur-row">
+                    <CompteurModeRow
+                      nom={c.nom}
+                      mode={c.mode}
+                      locked={compteurADesDonnees(c.id)}
+                      onChange={(next) => {
+                        const compteurs = (currentSettings.compteurs ?? []).map((x) =>
+                          x.id === c.id ? { ...x, mode: next } : x
+                        );
+                        updateSettings({ compteurs });
+                      }}
+                    />
+                    <DeleteConfirmButton
+                      itemLabel={c.nom}
+                      undoMessage={`Compteur « ${c.nom} » supprimé`}
+                      onConfirm={() => {
+                        const compteurs = (currentSettings.compteurs ?? []).filter((x) => x.id !== c.id);
+                        const patch: Partial<typeof currentSettings> = { compteurs };
+                        if (currentSettings.compteurActifId === c.id) patch.compteurActifId = undefined;
+                        updateSettings(patch);
+                        if (currentSettings.compteurActifId === c.id) window.location.reload();
+                      }}
+                      icon={<IconTrash />}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
         )}
@@ -377,7 +419,11 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
                 <IconBell />
                 Rappels
               </h3>
-              <p className="settings-hint">Notification à l'ouverture de l'app si le crédit arrive à épuisement.</p>
+              <p className="settings-hint">
+                {mode === 'postpaye'
+                  ? "Notification à l'ouverture de l'app si le dernier relevé est trop ancien."
+                  : "Notification à l'ouverture de l'app si le crédit arrive à épuisement."}
+              </p>
               <label className="reminder-toggle-label">
                 <input
                   type="checkbox"
@@ -389,24 +435,31 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
                 <span className="reminder-toggle-track" aria-hidden>
                   <span className="reminder-toggle-thumb" />
                 </span>
-                <span className="reminder-toggle-text">Me rappeler de recharger</span>
+                <span className="reminder-toggle-text">
+                  {mode === 'postpaye' ? "Me rappeler de relever l'index" : 'Me rappeler de recharger'}
+                </span>
               </label>
               <div className="reminder-days-field">
                 <label htmlFor="reminder-days" className="reminder-days-label">
-                  Jours avant épuisement
+                  {mode === 'postpaye' ? 'Jours depuis le dernier relevé' : 'Jours avant épuisement'}
                 </label>
                 <input
                   id="reminder-days"
                   type="number"
                   min={0}
-                  max={30}
+                  max={90}
                   className="reminder-days-input"
                   value={reminderDaysBefore}
                   onChange={(e) => handleReminderDaysChange(parseInt(e.target.value, 10) || 0)}
                   aria-describedby="rappels-days-hint"
                 />
               </div>
-              <p id="rappels-days-hint" className="settings-hint settings-hint-inline">Alerte si jours restants ≤ ce nombre (défaut : 3).</p>
+              <p id="rappels-days-hint" className="settings-hint settings-hint-inline">
+                {mode === 'postpaye'
+                  ? 'Alerte si le dernier relevé date de plus de jours que ce nombre.'
+                  : 'Alerte si jours restants ≤ ce nombre (défaut : 3).'}
+              </p>
+              {mode === 'prepaye' && (
               <label className="reminder-toggle-label settings-toggle-spaced">
                 <input
                   type="checkbox"
@@ -419,6 +472,7 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
                 </span>
                 <span className="reminder-toggle-text">Rappel basé sur l'habitude (prochaine recharge suggérée)</span>
               </label>
+              )}
             </section>
 
             <section className="settings-section settings-card" aria-labelledby="objectif-heading">
@@ -508,7 +562,7 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
               <button
                 type="button"
                 className="btn btn-secondary backup-btn backup-btn--icon"
-                onClick={() => exportRelevesCSV(data.releves)}
+                onClick={() => exportRelevesCSV(data.releves, mode)}
                 title="Exporter les relevés (CSV)"
                 aria-label="Exporter les relevés en CSV"
               >
@@ -518,12 +572,12 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
               <button
                 type="button"
                 className="btn btn-secondary backup-btn backup-btn--icon"
-                onClick={() => exportAchatsCSV(data.achats)}
-                title="Exporter les achats (CSV)"
-                aria-label="Exporter les achats en CSV"
+                onClick={() => exportAchatsCSV(data.achats, mode)}
+                title={mode === 'postpaye' ? 'Exporter les factures (CSV)' : 'Exporter les achats (CSV)'}
+                aria-label={mode === 'postpaye' ? 'Exporter les factures en CSV' : 'Exporter les achats en CSV'}
               >
                 <IconCart />
-                <span className="backup-btn-label">Achats</span>
+                <span className="backup-btn-label">{mode === 'postpaye' ? 'Factures' : 'Achats'}</span>
               </button>
               <label
                 className="btn btn-secondary backup-btn backup-btn--icon backup-btn-import"
@@ -600,7 +654,8 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
                 <p>
                   Fichier valide : <strong>{importPayload.data.releves.length}</strong> relevé
                   {importPayload.data.releves.length !== 1 ? 's' : ''},{' '}
-                  <strong>{importPayload.data.achats.length}</strong> achat
+                  <strong>{importPayload.data.achats.length}</strong>{' '}
+                  {mode === 'postpaye' ? 'facture' : 'achat'}
                   {importPayload.data.achats.length !== 1 ? 's' : ''}.
                 </p>
                 <p className="settings-hint">Remplacer écrase toutes les données actuelles. Fusionner ajoute les entrées sans doublon (par id).</p>
@@ -730,5 +785,41 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
         )}
       </div>
     </div>
+  );
+}
+
+function compteurADesDonnees(id?: string): boolean {
+  const data = loadDataForCompteur(id);
+  return data.releves.length > 0 || data.achats.length > 0;
+}
+
+function CompteurModeRow({
+  nom,
+  mode,
+  locked,
+  onChange,
+}: {
+  nom: string;
+  mode: CompteurMode;
+  locked: boolean;
+  onChange: (mode: CompteurMode) => void;
+}) {
+  return (
+    <>
+      <span>{nom}</span>
+      {locked ? (
+        <span className="settings-compteur-type">{labelMode(mode)}</span>
+      ) : (
+        <select
+          className="objective-field-input settings-compteur-mode"
+          aria-label={`Type de ${nom}`}
+          value={mode}
+          onChange={(e) => onChange(e.target.value === 'postpaye' ? 'postpaye' : 'prepaye')}
+        >
+          <option value="prepaye">Prépayé</option>
+          <option value="postpaye">Postpayé</option>
+        </select>
+      )}
+    </>
   );
 }
