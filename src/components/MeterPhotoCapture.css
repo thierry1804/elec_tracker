@@ -13,12 +13,33 @@
   pointer-events: none;
 }
 
+.meter-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .meter-photo-btn {
-  align-self: flex-start;
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
   min-height: 2.25rem;
+}
+
+/* Écran tactile : appareil photo et galerie. Souris : un seul bouton, le sélecteur de fichier. */
+.meter-photo-label--desktop {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .meter-photo-actions .meter-photo-btn--camera,
+  .meter-photo-actions .meter-photo-label--touch {
+    display: none;
+  }
+
+  .meter-photo-label--desktop {
+    display: inline;
+  }
 }
 
 .meter-photo-status:empty {

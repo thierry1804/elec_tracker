@@ -18,6 +18,14 @@ type State =
   | { phase: 'done'; candidates: IndexCandidate[]; chosen: number }
   | { phase: 'error'; message: string };
 
+const IconGallery = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <circle cx="9" cy="10" r="1.5" />
+    <path d="M21 16l-5-5-8 8" />
+  </svg>
+);
+
 const IconCamera = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
@@ -32,7 +40,8 @@ const IconCamera = () => (
 export default function MeterPhotoCapture({ previousIndex, onValue }: MeterPhotoCaptureProps) {
   const [state, setState] = useState<State>({ phase: 'idle' });
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<string | null>(null);
 
   const setPreview = (url: string | null) => {
@@ -89,31 +98,56 @@ export default function MeterPhotoCapture({ previousIndex, onValue }: MeterPhoto
 
   const reading = state.phase === 'reading';
 
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) void handleFile(file);
+  };
+
   return (
     <div className="meter-photo">
+      {/* Deux entrées : l'appareil photo (capture) et la galerie / les fichiers (sans capture). */}
       <input
-        ref={inputRef}
+        ref={cameraRef}
         type="file"
         accept="image/*"
         capture="environment"
         className="meter-photo-input"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          e.target.value = '';
-          if (file) void handleFile(file);
-        }}
+        onChange={onPick}
         tabIndex={-1}
         aria-hidden
       />
-      <button
-        type="button"
-        className="btn btn-secondary btn-sm meter-photo-btn"
-        onClick={() => inputRef.current?.click()}
-        disabled={reading}
-      >
-        <IconCamera />
-        <span>{state.phase === 'idle' ? "Photographier l'index" : 'Reprendre une photo'}</span>
-      </button>
+      <input
+        ref={galleryRef}
+        type="file"
+        accept="image/*"
+        className="meter-photo-input"
+        onChange={onPick}
+        tabIndex={-1}
+        aria-hidden
+      />
+      <div className="meter-photo-actions">
+        {/* Sur ordinateur, « capture » est ignoré : un seul bouton « Choisir une photo » suffit. */}
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm meter-photo-btn meter-photo-btn--camera"
+          onClick={() => cameraRef.current?.click()}
+          disabled={reading}
+        >
+          <IconCamera />
+          <span>Prendre une photo</span>
+        </button>
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm meter-photo-btn"
+          onClick={() => galleryRef.current?.click()}
+          disabled={reading}
+        >
+          <IconGallery />
+          <span className="meter-photo-label--touch">Choisir dans la galerie</span>
+          <span className="meter-photo-label--desktop">Choisir une photo</span>
+        </button>
+      </div>
 
       <div aria-live="polite" className="meter-photo-status">
         {reading && (
