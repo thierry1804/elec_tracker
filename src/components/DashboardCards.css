@@ -32,12 +32,13 @@
   min-width: 0;
 }
 
-.dashboard-kpis .grid-4 {
+/* Spécificité renforcée : ces règles doivent l'emporter sur `.dashboard-cards .grid-4` (marge basse), déclarée plus bas. */
+.dashboard-top .dashboard-kpis .grid-4 {
   flex: 1;
   margin-bottom: 0;
 }
 
-.dashboard-kpis .stats-hint {
+.dashboard-top .dashboard-kpis .stats-hint {
   margin-bottom: 0;
 }
 
