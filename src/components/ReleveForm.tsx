@@ -7,6 +7,8 @@ import { useToast } from '../context/ToastContext';
 import { useModalA11y } from '../hooks/useModalA11y';
 import type { Releve } from '../types';
 import { labelReleveValeur, useCompteurMode } from '../lib/compteurMode';
+import { getRelevesTries } from '../lib/calculs';
+import MeterPhotoCapture from './MeterPhotoCapture';
 import './Modal.css';
 import { formatNombre } from '../lib/format';
 
@@ -43,7 +45,7 @@ interface FieldErrors {
 }
 
 export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
-  const { addReleve, updateReleve } = useApp();
+  const { data, addReleve, updateReleve } = useApp();
   const { showToast } = useToast();
   const modalRef = useModalA11y(onClose);
   const isEdit = !!releve;
@@ -54,6 +56,9 @@ export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
   const [creditRestantKwh, setCreditRestantKwh] = useState('');
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
+  // Dernier index connu (hors relevé en cours de modification) : guide le choix de la bonne lecture sur la photo.
+  const previousIndex =
+    getRelevesTries(data.releves.filter((r) => r.id !== releve?.id)).slice(-1)[0]?.creditRestantKwh ?? null;
 
   useEffect(() => {
     const init = getInitialState(releve);
@@ -186,6 +191,15 @@ export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
               <p id="releve-credit-error" className="field-error" role="alert">
                 {errors.creditRestantKwh}
               </p>
+            )}
+            {postpaye && (
+              <MeterPhotoCapture
+                previousIndex={previousIndex}
+                onValue={(v) => {
+                  setCreditRestantKwh(String(Math.round(v * 1000) / 1000).replace('.', ','));
+                  setErrors((prev) => ({ ...prev, creditRestantKwh: undefined }));
+                }}
+              />
             )}
           </div>
           </div>

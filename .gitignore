@@ -7,3 +7,7 @@ node_modules
 dist/
 .cursor/
 .impeccable/
+
+# Moteur de lecture copié depuis node_modules par scripts/copy-tesseract-assets.mjs
+public/tesseract/
+*.traineddata

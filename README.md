@@ -104,3 +104,21 @@ Voir le détail dans [IMPLEMENTATION.md](./IMPLEMENTATION.md). Idées proposées
 - **Alertes** : anomalie de consommation (pic), alerte dépassement budget, rappel basé sur l'habitude de recharge
 - **Rapports** : résumé hebdo/mensuel, saisonnalité (si assez de données), export « rapport » (PDF/HTML)
 - **UX** : conseils contextuels, unité préférée (Ar/kAr), période par défaut des graphiques
+
+## Lecture de l'index par photo (compteur postpayé)
+
+Dans « Nouveau relevé », le bouton « Photographier l'index » ouvre l'appareil photo, lit l'index sur la photo et
+pré-remplit le champ. L'utilisateur vérifie toujours la valeur avant d'enregistrer.
+
+- **Sur l'appareil** : lecture par Tesseract.js (WebAssembly). La photo n'est ni envoyée, ni enregistrée ; elle n'existe
+  que le temps de la vérification.
+- **Moteur** : chargé à la demande (~7 Mo, mis en cache une semaine) depuis `/tesseract/`, servi par le même domaine
+  (CSP stricte, usage hors ligne une fois chargé). `scripts/copy-tesseract-assets.mjs` copie les fichiers depuis
+  `node_modules` (`npm run build` et `npm run dev` le lancent) ; `public/tesseract/` n'est pas versionné.
+- **Choix de la lecture** : on essaie la photo contrastée, binarisée, puis inversée. Parmi les nombres lus, on retient le
+  plus vraisemblable : un index postpayé ne baisse pas et progresse peu entre deux relevés. Si la photo ne montre pas de
+  décimale, la lecture « dernier chiffre = décimale » est proposée en alternative.
+- **Limite connue** : Tesseract lit bien les chiffres imprimés (rouleaux mécaniques, étiquettes), y compris clairs sur
+  fond sombre, mais **pas les afficheurs LCD à segments**. Pour ces compteurs, la saisie manuelle reste nécessaire.
+- **Tests** : `npm test` (logique de choix et prétraitements) ; `OCR_EVAL=1 npx vitest run ocr.eval` lance la vraie lecture
+  sur les images de `src/lib/ocr/__fixtures__/`.
