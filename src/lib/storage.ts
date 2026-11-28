@@ -4,6 +4,37 @@ const STORAGE_KEY = 'electracker_data';
 export const LAST_SAVE_KEY = 'electracker_last_save';
 const SETTINGS_KEY = 'electracker_settings';
 
+export const DATA_KEY = STORAGE_KEY;
+export { SETTINGS_KEY };
+
+/**
+ * Observateur des écritures utilisateur (synchronisation serveur). Il reçoit l'état stocké avant l'écriture
+ * et le nouvel état ; les écritures venant du serveur passent par les fonctions `*Raw` et ne sont pas observées.
+ */
+export type ChangeEvent =
+  | { kind: 'data'; compteurId: string | undefined; before: AppData; after: AppData }
+  | { kind: 'settings'; before: AppSettings; after: AppSettings };
+
+let changeRecorder: ((event: ChangeEvent) => void) | null = null;
+
+export function setChangeRecorder(recorder: ((event: ChangeEvent) => void) | null): void {
+  changeRecorder = recorder;
+}
+
+function readStoredData(key: string): AppData {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return { achats: [], releves: [] };
+    const parsed = JSON.parse(raw) as Partial<AppData>;
+    return {
+      achats: Array.isArray(parsed.achats) ? parsed.achats : [],
+      releves: Array.isArray(parsed.releves) ? parsed.releves : [],
+    };
+  } catch {
+    return { achats: [], releves: [] };
+  }
+}
+
 const defaultData: AppData = {
   achats: [],
   releves: [],
@@ -100,6 +131,7 @@ export function loadData(): AppData {
 }
 
 export function saveData(data: AppData): void {
+  changeRecorder?.({ kind: 'data', compteurId: undefined, before: readStoredData(STORAGE_KEY), after: data });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   localStorage.setItem(LAST_SAVE_KEY, new Date().toISOString());
 }
@@ -156,6 +188,9 @@ export function loadSettings(): AppSettings {
     if (parsed.modePrincipal === 'prepaye' || parsed.modePrincipal === 'postpaye') {
       out.modePrincipal = parsed.modePrincipal;
     }
+    if (typeof parsed.nomPrincipal === 'string' && parsed.nomPrincipal.trim()) {
+      out.nomPrincipal = parsed.nomPrincipal.trim().slice(0, 120);
+    }
     return out;
   } catch {
     return {};
@@ -163,11 +198,21 @@ export function loadSettings(): AppSettings {
 }
 
 export function saveSettings(settings: AppSettings): void {
+  changeRecorder?.({ kind: 'settings', before: loadSettings(), after: settings });
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
 
+/** Écriture venant du serveur : non observée, ne génère aucune opération à renvoyer. */
+export function saveSettingsRaw(settings: AppSettings): void {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+export function saveDataRaw(compteurId: string | undefined, data: AppData): void {
+  localStorage.setItem(compteurId ? compteurStorageKey(compteurId) : STORAGE_KEY, JSON.stringify(data));
+}
+
 /** Clé de stockage propre à un compteur. */
-function compteurStorageKey(compteurId: string): string {
+export function compteurStorageKey(compteurId: string): string {
   return `${STORAGE_KEY}_${compteurId}`;
 }
 
@@ -195,6 +240,7 @@ export function loadDataForCompteur(compteurId?: string): AppData {
 }
 
 export function saveDataForCompteur(compteurId: string, data: AppData): void {
+  changeRecorder?.({ kind: 'data', compteurId, before: readStoredData(compteurStorageKey(compteurId)), after: data });
   localStorage.setItem(compteurStorageKey(compteurId), JSON.stringify(data));
   localStorage.setItem(compteurLastSaveKey(compteurId), new Date().toISOString());
 }

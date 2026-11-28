@@ -8,6 +8,7 @@ import { useModalA11y } from '../hooks/useModalA11y';
 import type { Releve } from '../types';
 import { labelReleveValeur, useCompteurMode } from '../lib/compteurMode';
 import './Modal.css';
+import { formatNombre } from '../lib/format';
 
 interface ReleveFormProps {
   onClose: () => void;
@@ -85,14 +86,14 @@ export default function ReleveForm({ onClose, releve }: ReleveFormProps) {
       const dateHeure = new Date(dateIso + 'T00:00:00');
       dateHeure.setHours(h, m, 0, 0);
       updateReleve(releve.id, { date: dateHeure.toISOString(), creditRestantKwh: kwh });
-      showToast({ message: `Relevé modifié · ${kwh.toFixed(1).replace('.', ',')} kWh` });
+      showToast({ message: `Relevé modifié · ${formatNombre(kwh, 1)} kWh` });
       onClose();
     } else {
       const [h, m] = timeStr.split(':').map(Number);
       const dateHeure = new Date(dateIso + 'T00:00:00');
       dateHeure.setHours(h, m, 0, 0);
       addReleve(dateHeure.toISOString(), kwh);
-      showToast({ message: `Relevé enregistré · ${kwh.toFixed(1).replace('.', ',')} kWh` });
+      showToast({ message: `Relevé enregistré · ${formatNombre(kwh, 1)} kWh` });
       onClose();
     }
   };

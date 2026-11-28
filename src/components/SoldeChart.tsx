@@ -11,7 +11,7 @@ import {
   ReferenceLine,
   ReferenceArea,
 } from 'recharts';
-import { getDonneesGraphiqueSolde } from '../lib/calculs';
+import { getDonneesGraphiqueSolde, getProjectionIndexFinDeMois } from '../lib/calculs';
 import { useCompteurMode } from '../lib/compteurMode';
 import type { Releve } from '../types';
 import { usePrevision } from '../context/PrevisionContext';
@@ -32,6 +32,7 @@ import {
   xAxisDateProps,
 } from '../lib/chartTheme';
 import './Charts.css';
+import { formatNombre } from '../lib/format';
 
 interface SoldeChartProps {
   releves: Releve[];
@@ -41,9 +42,10 @@ interface ChartPoint {
   date: string;
   solde?: number;
   prevision?: number;
-  previsionMin: number;
-  previsionMax: number;
-  bandHeight: number;
+  /** Bas de la fourchette : défini seulement à partir du dernier relevé (sinon la bande partirait de zéro). */
+  previsionMin?: number;
+  previsionMax?: number;
+  bandHeight?: number;
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -65,8 +67,16 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
     actualData = actualData.filter((p) => parseReleveDayMs(p.date) >= limit);
   }
   const prevision = usePrevision();
-  const forecastWithInterval =
-    prevision.donneesPrevision.length > 0 ? prevision.donneesPrevision : [];
+  // Prépayé : épuisement du crédit. Postpayé : index attendu jusqu'à la fin du mois courant.
+  const projectionMois =
+    postpaye && prevision.tauxJournalier != null
+      ? getProjectionIndexFinDeMois(releves, prevision.tauxJournalier)
+      : null;
+  const forecastWithInterval = postpaye
+    ? (projectionMois?.points ?? [])
+    : prevision.donneesPrevision.length > 0
+      ? prevision.donneesPrevision
+      : [];
 
   if (actualData.length === 0) {
     return (
@@ -87,14 +97,15 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
     actualData.length >= 2 ? lastActual.solde - firstActual.solde : null;
   const deltaStr =
     delta != null
-      ? `${delta >= 0 ? '+' : ''}${delta.toFixed(1).replace('.', ',')} kWh sur la période`
+      ? `${delta >= 0 ? '+' : ''}${formatNombre(delta, 1)} kWh sur la période`
       : null;
 
   const summary = (
     <>
-      {libelleDernier} :{' '}
-      <strong className="mono">{lastActual.solde.toFixed(1).replace('.', ',')} kWh</strong>
-      {deltaStr && <> · {deltaStr}</>}
+      <span className="chart-summary-item">
+        {libelleDernier} <strong className="mono">{formatNombre(lastActual.solde, 1)} kWh</strong>
+      </span>
+      {deltaStr && <span className="chart-summary-item">{deltaStr}</span>}
     </>
   );
 
@@ -102,9 +113,10 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
     date: p.date,
     solde: p.solde,
     prevision: i === actualData.length - 1 ? p.solde : undefined,
-    previsionMin: 0,
-    previsionMax: 0,
-    bandHeight: 0,
+    // La fourchette démarre au dernier relevé, avec une hauteur nulle.
+    previsionMin: i === actualData.length - 1 ? p.solde : undefined,
+    previsionMax: i === actualData.length - 1 ? p.solde : undefined,
+    bandHeight: i === actualData.length - 1 ? 0 : undefined,
   }));
 
   forecastWithInterval.forEach(({ date, solde, soldeMin, soldeMax }) => {
@@ -127,13 +139,13 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
   const tableRows = [
     ...actualData.map((p) => ({
       date: formatDateLong(p.date),
-      solde: `${p.solde.toFixed(2).replace('.', ',')} kWh`,
+      solde: `${formatNombre(p.solde, 2)} kWh`,
       type: 'Relevé',
     })),
     ...forecastWithInterval.slice(0, 14).map((p) => ({
       date: formatDateLong(p.date),
-      solde: `${p.solde.toFixed(2).replace('.', ',')} kWh`,
-      type: 'Prévision',
+      solde: `${formatNombre(p.solde, 2)} kWh`,
+      type: postpaye ? 'Projection' : 'Prévision',
     })),
   ].slice(-20);
 
@@ -142,7 +154,7 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
       title={titre}
       summary={summary}
       showPeriod
-      ariaSummary={`${postpaye ? 'Index' : 'Solde'} électrique, dernier relevé ${lastActual.solde.toFixed(1)} kilowattheures`}
+      ariaSummary={`${postpaye ? 'Index' : 'Solde'} électrique, dernier relevé ${formatNombre(lastActual.solde, 1)} kilowattheures`}
       tableColumns={[
         { key: 'date', header: 'Date' },
         { key: 'solde', header: postpaye ? 'Index' : 'Solde', align: 'right' },
@@ -163,11 +175,11 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
                 rowFormatter={(key, val) => {
                   const labels: Record<string, string> = {
                     solde: postpaye ? 'Index' : 'Solde réel',
-                    prevision: 'Prévision',
+                    prevision: postpaye ? 'Projection' : 'Prévision',
                   };
                   return {
                     label: labels[key] ?? key,
-                    value: `${val.toFixed(2).replace('.', ',')} kWh`,
+                    value: `${formatNombre(val, 2)} kWh`,
                     color: key === 'solde' ? SERIE_REAL : SERIE_FORECAST,
                   };
                 }}
@@ -182,7 +194,9 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
                 value === 'solde'
                   ? 'Réel'
                   : value === 'prevision'
-                    ? 'Prévision'
+                    ? postpaye
+                      ? 'Projection fin de mois'
+                      : 'Prévision'
                     : value === 'intervalle'
                       ? 'Fourchette'
                       : value
@@ -203,9 +217,9 @@ export default function SoldeChart({ releves }: SoldeChartProps) {
             strokeDasharray="4 4"
             label={{
               value: 'Dernier relevé',
-              position: 'insideTopLeft',
+              position: 'insideTopRight',
               fill: 'var(--muted)',
-              fontSize: 10,
+              fontSize: 12,
             }}
           />
           {hasBand && (

@@ -1,4 +1,5 @@
 import type { TooltipProps } from 'recharts';
+import { formatNombre } from '../lib/format';
 
 export interface ChartTooltipRow {
   label: string;
@@ -42,7 +43,7 @@ export function ChartTooltipContent({
         }
         return {
           label: String(entry.name ?? key),
-          value: typeof val === 'number' ? val.toFixed(2).replace('.', ',') : String(val),
+          value: typeof val === 'number' ? formatNombre(val, 2) : String(val),
           color: entry.color,
         };
       })

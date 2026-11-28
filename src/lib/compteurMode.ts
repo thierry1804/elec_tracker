@@ -7,6 +7,18 @@ export function resolveCompteurMode(settings: AppSettings): CompteurMode {
   return actif?.mode ?? 'prepaye';
 }
 
+export const NOM_PRINCIPAL_DEFAUT = 'Principal';
+
+export function nomCompteurPrincipal(settings: AppSettings): string {
+  return settings.nomPrincipal?.trim() || NOM_PRINCIPAL_DEFAUT;
+}
+
+/** Nom du compteur actuellement sélectionné. */
+export function nomCompteurActif(settings: AppSettings): string {
+  if (!settings.compteurActifId) return nomCompteurPrincipal(settings);
+  return settings.compteurs?.find((c) => c.id === settings.compteurActifId)?.nom ?? nomCompteurPrincipal(settings);
+}
+
 export function useCompteurMode(): CompteurMode {
   const { settings } = useSettings();
   return resolveCompteurMode(settings);

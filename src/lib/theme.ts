@@ -1,13 +1,28 @@
 const THEME_KEY = 'electracker_theme';
 
-export type Theme = 'light' | 'dark' | 'system';
+/** `auto` : sombre la nuit (heure locale), clair le jour. Défaut pour un nouvel utilisateur. */
+export type Theme = 'light' | 'dark' | 'auto';
 
 export type ResolvedTheme = 'light' | 'dark';
 
-export function getStoredTheme(): Theme | null {
-  const raw = localStorage.getItem(THEME_KEY);
-  if (raw === 'light' || raw === 'dark' || raw === 'system') return raw;
+/** Début et fin de la nuit, heure locale : sombre de 18 h inclus à 6 h exclu. */
+export const NIGHT_START_HOUR = 18;
+export const NIGHT_END_HOUR = 6;
+
+export function isNightHour(date: Date = new Date()): boolean {
+  const h = date.getHours();
+  return h >= NIGHT_START_HOUR || h < NIGHT_END_HOUR;
+}
+
+/** Ancien réglage « system » (suivre l'appareil) : remplacé par `auto`. */
+export function normalizeTheme(raw: string | null): Theme | null {
+  if (raw === 'light' || raw === 'dark' || raw === 'auto') return raw;
+  if (raw === 'system') return 'auto';
   return null;
+}
+
+export function getStoredTheme(): Theme | null {
+  return normalizeTheme(localStorage.getItem(THEME_KEY));
 }
 
 export function setStoredTheme(theme: Theme): void {
@@ -15,15 +30,10 @@ export function setStoredTheme(theme: Theme): void {
   applyStoredTheme();
 }
 
-export function getSystemTheme(): ResolvedTheme {
-  if (typeof window === 'undefined' || !window.matchMedia) return 'dark';
-  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-}
-
-export function getEffectiveTheme(): ResolvedTheme {
+export function getEffectiveTheme(date: Date = new Date()): ResolvedTheme {
   const stored = getStoredTheme();
   if (stored === 'light' || stored === 'dark') return stored;
-  return getSystemTheme();
+  return isNightHour(date) ? 'dark' : 'light';
 }
 
 function applyStoredTheme(): void {
@@ -34,12 +44,20 @@ export function initTheme(): void {
   applyStoredTheme();
 }
 
-export function subscribeToSystemTheme(): () => void {
-  if (typeof window === 'undefined' || !window.matchMedia) return () => {};
-  const mq = window.matchMedia('(prefers-color-scheme: light)');
-  const handler = () => {
-    if (getStoredTheme() === 'system') applyStoredTheme();
+/** En mode auto, le thème suit l'heure : réévalué chaque minute et au retour sur l'onglet. */
+export function subscribeToThemeChanges(): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const refresh = () => {
+    const stored = getStoredTheme();
+    if (stored !== 'light' && stored !== 'dark') applyStoredTheme();
   };
-  mq.addEventListener('change', handler);
-  return () => mq.removeEventListener('change', handler);
+  const interval = window.setInterval(refresh, 60_000);
+  const onVisible = () => {
+    if (document.visibilityState === 'visible') refresh();
+  };
+  document.addEventListener('visibilitychange', onVisible);
+  return () => {
+    window.clearInterval(interval);
+    document.removeEventListener('visibilitychange', onVisible);
+  };
 }

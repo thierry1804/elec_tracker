@@ -220,6 +220,23 @@ export function getTendanceConso(releves: Releve[], mode: CompteurMode = 'prepay
 }
 
 /**
+ * Les relevés vont-ils dans le mauvais sens pour le type du compteur ?
+ * Prépayé : le crédit ne baisse jamais et aucun achat n'explique la hausse. Postpayé : l'index baisse à chaque relevé.
+ * Il faut au moins deux intervalles pour conclure.
+ */
+export function isTypeCompteurSuspect(
+  releves: Releve[],
+  mode: CompteurMode,
+  nbAchats: number
+): boolean {
+  const consos = getConsommationsEntreReleves(releves, mode);
+  if (consos.length < 2) return false;
+  return mode === 'postpaye'
+    ? consos.every((c) => c.kwhConsommes < 0)
+    : nbAchats === 0 && consos.every((c) => c.kwhConsommes <= 0);
+}
+
+/**
  * Indique si la prévision est basée sur peu de données (moins de 3 jours d'historique).
  */
 export function isPrevisionPeuFiable(releves: Releve[]): boolean {
@@ -422,6 +439,85 @@ export function getDonneesPrevisionAvecIntervalleFromTaux(
   }
   result.push({ date: toIso(date), solde: 0, soldeMin: 0, soldeMax: 0 });
   return result;
+}
+
+export interface ProjectionIndexMois {
+  /** Un point par jour, du lendemain du dernier relevé à la fin du mois courant. */
+  points: { date: string; solde: number; soldeMin: number; soldeMax: number }[];
+  /** Index attendu le dernier jour du mois, au rythme actuel. */
+  indexFinMois: number;
+  /** Consommation estimée sur le mois entier (index de fin de mois moins index au 1er du mois). */
+  consoMois: number;
+  /** Aucun relevé avant le 1er du mois : la consommation est comptée depuis le premier relevé du mois. */
+  depuisPremierReleve: boolean;
+}
+
+const MS_JOUR = 24 * 60 * 60 * 1000;
+
+function jourLocalIso(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Projection de l'index d'un compteur postpayé jusqu'à la fin du mois courant, à partir du taux journalier,
+ * avec la même fourchette de confiance que la prévision de crédit.
+ * Renvoie null s'il n'y a rien à projeter (taux nul, dernier relevé le dernier jour du mois ou trop ancien).
+ */
+export function getProjectionIndexFinDeMois(
+  releves: Releve[],
+  tauxJournalier: number,
+  now: Date = new Date()
+): ProjectionIndexMois | null {
+  const tries = getRelevesTries(releves);
+  if (tries.length === 0 || !(tauxJournalier > 0)) return null;
+  const dernier = tries[tries.length - 1];
+
+  const debutDernierJour = new Date(dateStrToLocalEndOfDayMs(dernier.date));
+  debutDernierJour.setHours(0, 0, 0, 0);
+  const finDuMois = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const debutDuMois = new Date(now.getFullYear(), now.getMonth(), 1);
+  if (debutDernierJour.getTime() >= finDuMois.getTime()) return null;
+  if (now.getTime() - debutDernierJour.getTime() > 31 * MS_JOUR) return null;
+
+  const marge = getMargeIntervalleConfiance(releves, 'postpaye');
+  const tauxMin = tauxJournalier * (1 - marge);
+  const tauxMax = tauxJournalier * (1 + marge);
+  const base = dernier.creditRestantKwh;
+
+  const points: ProjectionIndexMois['points'] = [];
+  for (let k = 1; ; k++) {
+    const jour = new Date(debutDernierJour.getTime());
+    jour.setDate(jour.getDate() + k);
+    if (jour.getTime() > finDuMois.getTime()) break;
+    points.push({
+      date: jourLocalIso(jour),
+      solde: base + tauxJournalier * k,
+      soldeMin: base + tauxMin * k,
+      soldeMax: base + tauxMax * k,
+    });
+  }
+  if (points.length === 0) return null;
+  const indexFinMois = points[points.length - 1].solde;
+
+  // Index au 1er du mois : interpolé entre les deux relevés qui l'encadrent, sinon premier relevé du mois.
+  const ms = (r: Releve) => dateStrToLocalEndOfDayMs(r.date);
+  const avant = [...tries].reverse().find((r) => ms(r) < debutDuMois.getTime());
+  const apres = tries.find((r) => ms(r) >= debutDuMois.getTime());
+  let indexDebutMois: number;
+  let depuisPremierReleve = false;
+  if (avant && apres) {
+    const span = ms(apres) - ms(avant);
+    const part = span > 0 ? (debutDuMois.getTime() - ms(avant)) / span : 0;
+    indexDebutMois = avant.creditRestantKwh + (apres.creditRestantKwh - avant.creditRestantKwh) * part;
+  } else if (apres) {
+    indexDebutMois = apres.creditRestantKwh;
+    depuisPremierReleve = true;
+  } else {
+    // Tous les relevés sont avant le 1er du mois : index au 1er extrapolé au rythme actuel.
+    const joursAvantDebut = Math.max(0, (debutDuMois.getTime() - debutDernierJour.getTime()) / MS_JOUR);
+    indexDebutMois = base + tauxJournalier * joursAvantDebut;
+  }
+  return { points, indexFinMois, consoMois: Math.max(0, indexFinMois - indexDebutMois), depuisPremierReleve };
 }
 
 /**

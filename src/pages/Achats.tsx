@@ -7,6 +7,7 @@ import DeleteConfirmButton from '../components/DeleteConfirmButton';
 import PrixAchatsChart from '../components/PrixAchatsChart';
 import { IconEdit, IconTrash } from '../components/nav/NavIcons';
 import { labelAchatsNav, labelAchatKwh, useCompteurMode } from '../lib/compteurMode';
+import { formatNombreSouple } from '../lib/format';
 import '../components/Charts.css';
 
 export default function Achats() {
@@ -53,8 +54,11 @@ export default function Achats() {
   if (achats.length === 0) {
     return (
       <div className="page achats">
+        <PageHeader
+          title={labelAchatsNav(mode)}
+          lead={postpaye ? 'Factures enregistrées et prix unitaire.' : 'Recharges enregistrées et prix unitaire.'}
+        />
         <div className="page-empty dashboard-empty" role="status">
-          <h2 className="dashboard-empty-title">{labelAchatsNav(mode)}</h2>
           <p className="dashboard-empty-text">
             {postpaye
               ? 'Aucune facture enregistrée. Saisissez le montant et les kWh facturés.'
@@ -106,7 +110,7 @@ export default function Achats() {
               <tr key={a.id}>
                 <td>{formatDateHeure(a.date)}</td>
                 <td className="mono">{a.montantAr.toLocaleString('fr-FR')}</td>
-                <td className="mono">{a.creditKwh}</td>
+                <td className="mono">{formatNombreSouple(a.creditKwh)}</td>
                 <td className="mono">{Math.round(a.prixUnitaireArPerKwh).toLocaleString('fr-FR')}</td>
                 <td>
                   <div className="table-actions">

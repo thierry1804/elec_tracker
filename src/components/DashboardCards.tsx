@@ -4,6 +4,7 @@ import {
   getPrixMoyenArPerKwh,
   getCoutMensuelEstime,
   isPrevisionPeuFiable,
+  getProjectionIndexFinDeMois,
 } from '../lib/calculs';
 import { useCompteurMode } from '../lib/compteurMode';
 import type { AppData } from '../types';
@@ -12,6 +13,7 @@ import { usePrevision } from '../context/PrevisionContext';
 import { useLayoutActions } from '../context/LayoutContext';
 import ArcGauge from './ArcGauge';
 import './DashboardCards.css';
+import { formatNombre, formatNombreSouple } from '../lib/format';
 
 const MAX_CREDIT_GAUGE = 100;
 
@@ -122,8 +124,86 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
       year: 'numeric',
     });
 
+  interface Stat {
+    key: string;
+    label: string;
+    value: string;
+    unit?: string;
+    tone: 'accent' | 'green' | 'amber' | 'plain';
+    sub: React.ReactNode;
+  }
+  /** Seules les valeurs connues prennent de la place : pas de carte « — ». */
+  const stats: Stat[] = [];
+  if (!isEmpty) {
+    if (!postpaye && joursRestants !== null) {
+      stats.push({ key: 'jours', label: 'Jours restants', value: String(joursRestants), tone: 'accent', sub: 'Estimation au rythme actuel' });
+    }
+    if (tauxJournalier != null) {
+      stats.push({
+        key: 'conso',
+        label: 'Consommation par jour',
+        value: formatNombre(tauxJournalier),
+        unit: 'kWh',
+        tone: 'green',
+        sub: (
+          <>
+            Moyenne sur 7 et 30 jours
+            {previsionLoading && <span> (assistant local…)</span>}
+            {!previsionLoading && previsionPeuFiable && <span className="stat-sub-warning">, peu fiable</span>}
+          </>
+        ),
+      });
+    }
+    if (postpaye && tauxJournalier != null) {
+      const projection = getProjectionIndexFinDeMois(releves, tauxJournalier);
+      if (projection) {
+        const fin = projection.points[projection.points.length - 1].date.split('-');
+        stats.push({
+          key: 'fin-mois',
+          label: 'Index fin de mois',
+          value: formatNombre(projection.indexFinMois, 1),
+          unit: 'kWh',
+          tone: 'accent',
+          sub: `Estimation au ${fin[2]}/${fin[1]}, au rythme actuel`,
+        });
+        stats.push({
+          key: 'conso-mois',
+          label: 'Consommation du mois',
+          value: formatNombre(projection.consoMois, 1),
+          unit: 'kWh',
+          tone: 'plain',
+          sub: projection.depuisPremierReleve ? 'Estimation, depuis le 1er relevé du mois' : 'Estimation sur le mois entier',
+        });
+      }
+    }
+    if (prixMoyen != null) {
+      stats.push({
+        key: 'prix',
+        label: 'Prix moyen',
+        value: formatNombre(prixMoyen),
+        unit: 'Ar/kWh',
+        tone: 'amber',
+        sub: postpaye ? 'Toutes factures confondues' : 'Tous achats confondus',
+      });
+    }
+    if (coutMensuel != null) {
+      stats.push({
+        key: 'cout',
+        label: 'Coût mensuel estimé',
+        value: coutMensuel >= 1000 ? `${formatNombre(coutMensuel / 1000)}k` : formatNombre(coutMensuel),
+        unit: 'Ar',
+        tone: 'plain',
+        sub: kwhMoisEstime != null ? `Basé sur ~${formatNombre(kwhMoisEstime)} kWh / 30 j` : 'Basé sur 30 jours',
+      });
+    }
+  }
+  const prixManquant = !isEmpty && prixMoyen == null;
+  const consoManquante = !isEmpty && tauxJournalier == null;
+  const layoutActions = useLayoutActions();
+
   return (
     <div className="dashboard-cards">
+      <div className="dashboard-top">
       {/* Hero — crédit restant ou index */}
       <div className="hero-card">
         <div className="hero-top">
@@ -132,7 +212,7 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
             <div
               className={`hero-value ${isEmpty ? 'empty' : postpaye ? '' : creditStatus}`}
             >
-              {isEmpty ? '—' : creditRestant}
+              {isEmpty ? '—' : formatNombreSouple(creditRestant)}
               {!isEmpty && <span className="hero-unit">kWh</span>}
             </div>
             {isEmpty ? (
@@ -146,7 +226,10 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
                 {postpaye ? (
                   kwhDepuis != null ? (
                     <>
-                      {kwhDepuis.toFixed(1).replace('.', ',')} kWh depuis le relevé précédent
+                      <span>+{formatNombre(kwhDepuis, 1)} kWh</span> depuis le relevé précédent
+                      {dateDernierReleve && (
+                        <div className="hero-meta">Relevé du {formatDate(dateDernierReleve)}</div>
+                      )}
                     </>
                   ) : (
                     <>Index au {dateDernierReleve && formatDate(dateDernierReleve)}</>
@@ -158,9 +241,9 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
                 )}
                 {achatDebug && (
                   <div className="hero-debug">
-                    Dernier achat: +{achatDebug.lastAchat.creditKwh.toFixed(2)} kWh · base:{' '}
-                    {achatDebug.baseReleve ? `${achatDebug.baseReleve.creditRestantKwh.toFixed(2)} kWh` : '—'} ·
-                    attendu: {achatDebug.creditAttendu.toFixed(2)} kWh · actuel: {creditRestant.toFixed(2)} kWh
+                    Dernier achat: +{formatNombre(achatDebug.lastAchat.creditKwh)} kWh · base:{' '}
+                    {achatDebug.baseReleve ? `${formatNombre(achatDebug.baseReleve.creditRestantKwh)} kWh` : '—'} ·
+                    attendu: {formatNombre(achatDebug.creditAttendu)} kWh · actuel: {formatNombre(creditRestant)} kWh
                   </div>
                 )}
               </div>
@@ -197,87 +280,42 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
         )}
       </div>
 
-      {/* Stats grid */}
-      <div className="grid-4">
-        <div className="stat-card">
-          <div className="stat-label">{postpaye ? 'Depuis le relevé précédent' : 'Jours restants'}</div>
-          {isEmpty ? (
-            <div className="stat-empty">—</div>
-          ) : postpaye ? (
-            <div className="stat-value stat-value--accent">
-              {kwhDepuis != null ? kwhDepuis.toFixed(1).replace('.', ',') : '—'}
-              {kwhDepuis != null && <span className="stat-unit"> kWh</span>}
+      <div className="dashboard-kpis">
+      {stats.length > 0 && (
+        <div className="grid-4">
+          {stats.map((st) => (
+            <div className="stat-card" key={st.key}>
+              <div className="stat-label">{st.label}</div>
+              <div className={`stat-value${st.tone === 'plain' ? '' : ` stat-value--${st.tone}`}`}>
+                {st.value}
+                {st.unit && <span className="stat-unit"> {st.unit}</span>}
+              </div>
+              <div className="stat-sub">{st.sub}</div>
             </div>
-          ) : (
-            <div className="stat-value stat-value--accent">
-              {joursRestants !== null ? joursRestants : '—'}
-            </div>
-          )}
-          <div className="stat-sub">
-            {postpaye ? 'kWh consommés sur le dernier intervalle' : 'Estimation au rythme actuel'}
-          </div>
+          ))}
         </div>
+      )}
 
-        <div className="stat-card">
-          <div className="stat-label">Conso. / jour</div>
-          {isEmpty ? (
-            <div className="stat-empty">—</div>
-          ) : (
-            <div className="stat-value stat-value--green">
-              {tauxJournalier != null
-                ? tauxJournalier.toFixed(2)
-                : '—'}
-              {tauxJournalier != null && (
-                <span className="stat-unit"> kWh</span>
-              )}
-            </div>
-          )}
-          <div className="stat-sub">
-            Moyenne sur 7 et 30 jours
-            {previsionLoading && <span> (assistant local…)</span>}
-            {!previsionLoading && previsionPeuFiable && tauxJournalier != null && (
-              <span className="stat-sub-warning">, peu fiable</span>
-            )}
-          </div>
+      {(prixManquant || consoManquante) && (
+        <div className="stats-hint" role="note">
+          <span>
+            {prixManquant
+              ? postpaye
+                ? 'Ajoutez une facture pour voir le prix moyen et le coût mensuel estimé.'
+                : 'Ajoutez un achat pour voir le prix moyen et le coût mensuel estimé.'
+              : 'Ajoutez un relevé de plus pour estimer la consommation et le coût mensuel.'}
+          </span>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => (prixManquant ? layoutActions?.openAchat() : layoutActions?.openReleve())}
+          >
+            {prixManquant ? (postpaye ? '+ Facture' : '+ Achat') : '+ Relevé'}
+          </button>
         </div>
+      )}
 
-        <div className="stat-card">
-          <div className="stat-label">Prix moyen</div>
-          {isEmpty ? (
-            <div className="stat-empty">—</div>
-          ) : (
-            <div className="stat-value stat-value--amber">
-              {prixMoyen != null ? prixMoyen.toFixed(2).replace('.', ',') : '—'}
-              {prixMoyen != null && (
-                <span className="stat-unit"> Ar/kWh</span>
-              )}
-            </div>
-          )}
-          <div className="stat-sub">{postpaye ? 'Toutes factures confondues' : 'Tous achats confondus'}</div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-label">Coût mensuel est.</div>
-          {isEmpty ? (
-            <div className="stat-empty">—</div>
-          ) : (
-            <div className="stat-value">
-              {coutMensuel != null
-                ? coutMensuel >= 1000
-                  ? `${(coutMensuel / 1000).toFixed(2)}k`
-                  : coutMensuel.toFixed(2).replace('.', ',')
-                : '—'}
-              {coutMensuel != null && (
-                <span className="stat-unit"> Ar</span>
-              )}
-            </div>
-          )}
-          <div className="stat-sub">
-            {kwhMoisEstime != null
-              ? `Basé sur ~${kwhMoisEstime.toFixed(2)} kWh / 30j`
-              : 'Basé sur 30 jours'}
-          </div>
-        </div>
+      </div>
       </div>
 
       {/* Indicateurs objectif / budget */}

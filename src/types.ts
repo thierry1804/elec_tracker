@@ -59,4 +59,6 @@ export interface AppSettings {
   compteurActifId?: string;
   /** Type du compteur principal (stockage sans id). Absent = prépayé. */
   modePrincipal?: CompteurMode;
+  /** Nom du compteur principal. Absent = « Principal ». */
+  nomPrincipal?: string;
 }

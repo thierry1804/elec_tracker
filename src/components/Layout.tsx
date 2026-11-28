@@ -7,13 +7,15 @@ import ReminderInAppBanner from './ReminderInAppBanner';
 import MobileBottomNav from './MobileBottomNav';
 import ActionSheet from './ActionSheet';
 import CompteurSwitcher from './CompteurSwitcher';
+import AccountMenu from './AccountMenu';
+import UpdateBanner from './UpdateBanner';
 import ToastContainer from './ToastContainer';
 import KeyboardShortcutsHelp from './KeyboardShortcutsHelp';
 import { LayoutActionsProvider } from '../context/LayoutContext';
 import { PrevisionProvider } from '../context/PrevisionContext';
 import { useApp } from '../context/AppContext';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
-import { labelAchatAction, labelAchatsNav, labelModeBadge, useCompteurMode } from '../lib/compteurMode';
+import { labelAchatAction, labelAchatsNav, useCompteurMode } from '../lib/compteurMode';
 import {
   IconAchats,
   IconAchat,
@@ -76,7 +78,6 @@ export default function Layout() {
                     <IconBolt />
                   </div>
                   <span className="logo-name">ElecTracker</span>
-                  <span className="badge-prepaye badge-prepaye-full">{labelModeBadge(mode)}</span>
                   <CompteurSwitcher />
                 </div>
                 <time className="date date-long" dateTime={today.toISOString()}>
@@ -101,6 +102,7 @@ export default function Layout() {
                     </NavLink>
                   ))}
                 </nav>
+                <AccountMenu />
                 <div className="header-actions header-actions-desk">
                   <button type="button" className="btn btn-secondary btn-labeled" onClick={openReleve}>
                     <IconReleve />
@@ -117,6 +119,7 @@ export default function Layout() {
 
           <div className="layout-spacer" aria-hidden="true" />
 
+          <UpdateBanner />
           <ReminderInAppBanner />
 
           <main className="main">

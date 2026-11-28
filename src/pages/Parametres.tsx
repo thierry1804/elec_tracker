@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import PageHeader from '../components/PageHeader';
 import SettingsTabs from '../components/settings/SettingsTabs';
 import SettingsPageContent from '../components/settings/SettingsPageContent';
@@ -13,8 +14,14 @@ const TAB_LEADS: Record<SettingsTabId, string> = {
   avance: 'Prévision IA optionnelle (clé API).',
 };
 
+const TAB_IDS = Object.keys(TAB_LEADS) as SettingsTabId[];
+
 export default function Parametres() {
-  const [activeTab, setActiveTab] = useState<SettingsTabId>('general');
+  const [params] = useSearchParams();
+  const requested = params.get('onglet');
+  const [activeTab, setActiveTab] = useState<SettingsTabId>(
+    TAB_IDS.includes(requested as SettingsTabId) ? (requested as SettingsTabId) : 'general',
+  );
 
   return (
     <div className="page parametres">

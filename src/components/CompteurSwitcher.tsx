@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSettings } from '../context/SettingsContext';
-import { labelMode, resolveCompteurMode } from '../lib/compteurMode';
+import { labelMode, nomCompteurActif, nomCompteurPrincipal, resolveCompteurMode } from '../lib/compteurMode';
 import './CompteurSwitcher.css';
 
 export default function CompteurSwitcher() {
   const { settings, updateSettings } = useSettings();
   const compteurs = settings.compteurs ?? [];
   const actifId = settings.compteurActifId;
-  const actif = actifId ? compteurs.find((c) => c.id === actifId) : null;
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -20,7 +19,7 @@ export default function CompteurSwitcher() {
     return () => document.removeEventListener('click', handleClick);
   }, [open]);
 
-  const label = actif?.nom ?? 'Principal';
+  const label = nomCompteurActif(settings);
   const modeLabel = labelMode(resolveCompteurMode(settings));
 
   const select = (id: string | undefined) => {
@@ -55,7 +54,7 @@ export default function CompteurSwitcher() {
         <ul className="compteur-switcher-menu" role="listbox" aria-label="Compteurs">
           <li>
             <button type="button" role="option" aria-selected={!actifId} onClick={() => select(undefined)}>
-              <span className="compteur-switcher-name">Principal</span>
+              <span className="compteur-switcher-name">{nomCompteurPrincipal(settings)}</span>
               <span className="compteur-switcher-mode">{labelMode(settings.modePrincipal ?? 'prepaye')}</span>
             </button>
           </li>

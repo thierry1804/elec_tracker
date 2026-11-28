@@ -90,7 +90,7 @@ export default function KwhMoisChart({ data }: KwhMoisChartProps) {
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <ComposedChart data={chartData} margin={CHART_MARGIN_WITH_RIGHT_LABEL}>
           <CartesianGrid {...GRID_PROPS} />
-          <XAxis dataKey="label" stroke="var(--muted)" fontSize={11} minTickGap={20} />
+          <XAxis dataKey="label" stroke="var(--muted)" fontSize={12} minTickGap={20} />
           <YAxis yAxisId="kwh" {...yAxisKwhProps()} />
           <YAxis yAxisId="ar" orientation="right" {...yAxisArProps()} />
           <Tooltip
@@ -152,7 +152,7 @@ export default function KwhMoisChart({ data }: KwhMoisChartProps) {
                 value: `Obj. ${objectifKwh} kWh`,
                 position: 'insideTopLeft',
                 fill: 'var(--red)',
-                fontSize: 10,
+                fontSize: 12,
               }}
             />
           )}

@@ -1,17 +1,20 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
-import { initTheme, subscribeToSystemTheme } from './lib/theme'
+import { initTheme, subscribeToThemeChanges } from './lib/theme'
 import App from './App'
+import AuthGate from './components/AuthGate'
 import './index.css'
 
 initTheme()
-subscribeToSystemTheme()
+subscribeToThemeChanges()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <HashRouter>
-      <App />
+      <AuthGate>
+        <App />
+      </AuthGate>
     </HashRouter>
   </StrictMode>,
 )

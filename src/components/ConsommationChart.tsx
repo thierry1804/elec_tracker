@@ -10,7 +10,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { getDonneesGraphiqueConso } from '../lib/calculs';
+import { Link } from 'react-router-dom';
+import { getDonneesGraphiqueConso, getRelevesTries } from '../lib/calculs';
 import { useCompteurMode } from '../lib/compteurMode';
 import { useSettings } from '../context/SettingsContext';
 import { usePrevision } from '../context/PrevisionContext';
@@ -29,6 +30,7 @@ import {
   formatDateLong,
 } from '../lib/chartTheme';
 import './Charts.css';
+import { formatNombre, formatNombreSouple } from '../lib/format';
 
 interface ConsommationChartProps {
   releves: Releve[];
@@ -97,7 +99,20 @@ export default function ConsommationChart({ releves }: ConsommationChartProps) {
           <h3 className="chart-title">Consommation entre relevés</h3>
         </div>
         <div className="chart-empty">
-          <p className="chart-empty-text">Ajoutez au moins 2 relevés</p>
+          {getRelevesTries(releves).length < 2 ? (
+            <p className="chart-empty-text">Ajoutez au moins 2 relevés</p>
+          ) : (
+            <>
+              <p className="chart-empty-text">
+                {mode === 'postpaye'
+                  ? "L'index n'a pas augmenté entre vos relevés. S'il baisse, ce compteur est peut-être prépayé."
+                  : "Le crédit n'a pas baissé entre vos relevés. S'il monte comme un index, ce compteur est peut-être postpayé."}
+              </p>
+              <Link className="btn btn-secondary btn-sm" to="/parametres?onglet=compteurs">
+                Changer le type du compteur
+              </Link>
+            </>
+          )}
         </div>
       </div>
     );
@@ -115,24 +130,19 @@ export default function ConsommationChart({ releves }: ConsommationChartProps) {
   const summary = (
     <>
       {moyRecent != null && (
-        <>
-          Moy. récente :{' '}
-          <strong className="mono">{moyRecent.toFixed(2).replace('.', ',')} kWh/j</strong>
-        </>
+        <span className="chart-summary-item">
+          Moyenne récente <strong className="mono">{formatNombre(moyRecent, 2)} kWh/j</strong>
+        </span>
       )}
-      {moyenne != null && moyRecent != null && <> · </>}
       {moyenne != null && (
-        <>
-          Moy. période :{' '}
-          <strong className="mono">{moyenne.toFixed(2).replace('.', ',')} kWh/j</strong>
-        </>
+        <span className="chart-summary-item">
+          Moyenne de la période <strong className="mono">{formatNombre(moyenne, 2)} kWh/j</strong>
+        </span>
       )}
       {taux != null && (
-        <>
-          {' '}
-          · Prévision :{' '}
-          <strong className="mono">{taux.toFixed(2).replace('.', ',')} kWh/j</strong>
-        </>
+        <span className="chart-summary-item">
+          Prévision <strong className="mono">{formatNombre(taux, 2)} kWh/j</strong>
+        </span>
       )}
     </>
   );
@@ -142,10 +152,10 @@ export default function ConsommationChart({ releves }: ConsommationChartProps) {
     .map((row) => ({
       date: formatDateLong(row.dateIso),
       conso:
-        row.conso != null ? `${row.conso.toFixed(2).replace('.', ',')} kWh` : '—',
+        row.conso != null ? `${formatNombre(row.conso, 2)} kWh` : '—',
       prevision:
         row.previsionConso != null
-          ? `${row.previsionConso.toFixed(2).replace('.', ',')} kWh/j`
+          ? `${formatNombre(row.previsionConso, 2)} kWh/j`
           : '—',
     }))
     .slice(-20);
@@ -155,7 +165,7 @@ export default function ConsommationChart({ releves }: ConsommationChartProps) {
       title="Consommation entre relevés"
       summary={summary}
       showPeriod
-      ariaSummary={`Consommation entre relevés, moyenne ${moyenne?.toFixed(1) ?? '—'} kilowattheures par jour`}
+      ariaSummary={`Consommation entre relevés, moyenne ${moyenne != null ? formatNombre(moyenne, 1) : '—'} kilowattheures par jour`}
       tableColumns={[
         { key: 'date', header: 'Date' },
         { key: 'conso', header: 'Consommation', align: 'right' },
@@ -169,7 +179,7 @@ export default function ConsommationChart({ releves }: ConsommationChartProps) {
           <XAxis
             dataKey="label"
             stroke="var(--muted)"
-            fontSize={11}
+            fontSize={12}
             minTickGap={data.length > 10 ? 24 : 12}
           />
           <YAxis {...yAxisKwhProps()} />
@@ -180,14 +190,14 @@ export default function ConsommationChart({ releves }: ConsommationChartProps) {
                   if (key === 'conso') {
                     return {
                       label: 'Consommation',
-                      value: `${val.toFixed(2).replace('.', ',')} kWh`,
+                      value: `${formatNombre(val, 2)} kWh`,
                       color: SERIE_REAL,
                     };
                   }
                   if (key === 'previsionConso') {
                     return {
                       label: 'Prévision',
-                      value: `${val.toFixed(2).replace('.', ',')} kWh/j`,
+                      value: `${formatNombre(val, 2)} kWh/j`,
                       color: SERIE_FORECAST,
                     };
                   }
@@ -235,10 +245,10 @@ export default function ConsommationChart({ releves }: ConsommationChartProps) {
               stroke="var(--red)"
               strokeDasharray="6 3"
               label={{
-                value: `Objectif ${objectifKwhJour.toString().replace('.', ',')} kWh/j`,
+                value: `Objectif ${formatNombreSouple(objectifKwhJour)} kWh/j`,
                 position: 'insideTopRight',
                 fill: 'var(--red)',
-                fontSize: 10,
+                fontSize: 12,
               }}
             />
           )}

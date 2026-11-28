@@ -1,3 +1,5 @@
+import { formatNombre } from './format';
+
 export const CHART_HEIGHT = 300;
 export const CHART_HEIGHT_MOBILE = 260;
 
@@ -17,7 +19,7 @@ export const CHART_MARGIN_WITH_RIGHT_LABEL = {
 
 export const AXIS_TICK = {
   fill: 'var(--muted)',
-  fontSize: 11,
+  fontSize: 12,
 };
 
 export const GRID_PROPS = {
@@ -28,11 +30,11 @@ export const GRID_PROPS = {
 
 export function formatKwhTick(value: number): string {
   if (Math.abs(value) >= 100) return `${Math.round(value)}`;
-  return value.toFixed(1).replace('.', ',');
+  return formatNombre(value, 1);
 }
 
 export function formatArTick(value: number): string {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000_000) return `${formatNombre(value / 1_000_000, 1)}M`;
   if (value >= 1_000) return `${Math.round(value / 1_000)}k`;
   return String(Math.round(value));
 }
@@ -54,7 +56,7 @@ export function formatDateLong(iso: string): string {
 export function yAxisKwhProps(extra?: object) {
   return {
     stroke: 'var(--muted)',
-    fontSize: 11,
+    fontSize: 12,
     tickFormatter: (v: number) => formatKwhTick(v),
     width: 44,
     label: {
@@ -62,7 +64,7 @@ export function yAxisKwhProps(extra?: object) {
       angle: -90,
       position: 'insideLeft' as const,
       fill: 'var(--muted)',
-      fontSize: 10,
+      fontSize: 12,
       offset: 8,
     },
     ...extra,
@@ -72,7 +74,7 @@ export function yAxisKwhProps(extra?: object) {
 export function yAxisArProps(extra?: object) {
   return {
     stroke: 'var(--muted)',
-    fontSize: 11,
+    fontSize: 12,
     tickFormatter: (v: number) => formatArTick(v),
     width: 48,
     label: {
@@ -80,7 +82,7 @@ export function yAxisArProps(extra?: object) {
       angle: 90,
       position: 'insideRight' as const,
       fill: 'var(--muted)',
-      fontSize: 10,
+      fontSize: 12,
       offset: 8,
     },
     ...extra,
@@ -90,7 +92,7 @@ export function yAxisArProps(extra?: object) {
 export function xAxisDateProps(dataLength: number, extra?: object) {
   return {
     stroke: 'var(--muted)',
-    fontSize: 11,
+    fontSize: 12,
     minTickGap: dataLength > 12 ? 28 : 16,
     tickFormatter: formatDateShort,
     ...extra,

@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useLayoutActions } from '../context/LayoutContext';
 import { usePrevision } from '../context/PrevisionContext';
@@ -13,6 +14,7 @@ import {
   getCoutMensuelEstime,
   getPrixMoyenArPerKwh,
   getRelevesTries,
+  isTypeCompteurSuspect,
 } from '../lib/calculs';
 import { getAnomalieConsommation } from '../lib/analytics';
 import { getConseilContextuel } from '../lib/conseils';
@@ -21,10 +23,12 @@ import { useSettings } from '../context/SettingsContext';
 import { getJoursDepuisReleve, SEUIL_JOURS_RELEVE_POSTPAYE, useCompteurMode } from '../lib/compteurMode';
 import CollapsibleSection from '../components/CollapsibleSection';
 import PageHeader from '../components/PageHeader';
+import { formatNombre } from '../lib/format';
 
 export default function Dashboard() {
   const { data } = useApp();
   const layoutActions = useLayoutActions();
+  const navigate = useNavigate();
   const prevision = usePrevision();
   const { releves, achats } = data;
   const mode = useCompteurMode();
@@ -89,6 +93,19 @@ export default function Dashboard() {
       action: layoutActions
         ? { label: 'Recharger', onClick: () => layoutActions.openAchat() }
         : undefined,
+    });
+  }
+  // Relevés qui vont dans le mauvais sens pour le type du compteur : probablement un type mal choisi.
+  const typeSuspect = isTypeCompteurSuspect(releves, mode, achats.length);
+  if (typeSuspect) {
+    dashboardAlerts.push({
+      id: 'type-suspect',
+      kind: 'warning',
+      priority: 2,
+      message: postpaye
+        ? "L'index baisse à chaque relevé. Ce compteur est peut-être prépayé."
+        : "Vos relevés montent sans achat enregistré. Ce compteur est peut-être postpayé.",
+      action: { label: 'Changer le type', onClick: () => navigate('/parametres?onglet=compteurs') },
     });
   }
   if (releveAncien) {
@@ -189,9 +206,9 @@ export default function Dashboard() {
   if (!hasReleves) {
     return (
       <div className="page dashboard">
+        <PageHeader title="Dashboard" lead="Bienvenue sur ElecTracker." />
         <div className="dashboard-empty" role="status">
-          <h2 className="dashboard-empty-title">Bienvenue sur ElecTracker</h2>
-          <p className="dashboard-empty-text">
+                    <p className="dashboard-empty-text">
             {postpaye
               ? 'Pour suivre votre électricité postpayée :'
               : 'Trois étapes pour suivre votre électricité prépayée :'}
@@ -229,10 +246,10 @@ export default function Dashboard() {
         title="Dashboard"
         lead={
           postpaye
-            ? `Index ${creditRestant.toFixed(1).replace('.', ',')} kWh`
+            ? `Index ${formatNombre(creditRestant, 1)} kWh`
             : joursRestants != null
-              ? `${creditRestant.toFixed(1).replace('.', ',')} kWh restants · ~${joursRestants} j`
-              : `${creditRestant.toFixed(1).replace('.', ',')} kWh restants`
+              ? `${formatNombre(creditRestant, 1)} kWh restants · ~${joursRestants} j`
+              : `${formatNombre(creditRestant, 1)} kWh restants`
         }
       />
       <div className="page-stack">

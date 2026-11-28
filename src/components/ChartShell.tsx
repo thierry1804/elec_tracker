@@ -5,10 +5,10 @@ import type { AppSettings } from '../types';
 type Periode = NonNullable<AppSettings['periodeGraphiques']>;
 
 const PERIODE_OPTIONS: { value: Periode; short: string; title: string }[] = [
-  { value: '7', short: '7', title: '7 derniers jours' },
-  { value: '30', short: '30', title: '30 derniers jours' },
-  { value: '90', short: '90', title: '90 derniers jours' },
-  { value: 'tout', short: '∞', title: 'Toute la période' },
+  { value: '7', short: '7 j', title: '7 derniers jours' },
+  { value: '30', short: '30 j', title: '30 derniers jours' },
+  { value: '90', short: '90 j', title: '90 derniers jours' },
+  { value: 'tout', short: 'Tout', title: 'Toute la période' },
 ];
 
 const IconChart = () => (
@@ -98,20 +98,22 @@ export default function ChartShell({
                     className={`chart-toolbar-btn${view === 'chart' ? ' chart-toolbar-btn-active' : ''}`}
                     onClick={() => setView('chart')}
                     aria-pressed={view === 'chart'}
-                    title="Graphique"
-                    aria-label="Graphique"
+                    title="Afficher la courbe"
+                    aria-label="Afficher la courbe"
                   >
                     <IconChart />
+                    <span>Courbe</span>
                   </button>
                   <button
                     type="button"
                     className={`chart-toolbar-btn${view === 'table' ? ' chart-toolbar-btn-active' : ''}`}
                     onClick={() => setView('table')}
                     aria-pressed={view === 'table'}
-                    title="Tableau"
-                    aria-label="Tableau"
+                    title="Afficher le tableau"
+                    aria-label="Afficher le tableau"
                   >
                     <IconTable />
+                    <span>Tableau</span>
                   </button>
                 </div>
               )}

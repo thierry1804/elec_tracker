@@ -190,8 +190,7 @@ textarea {
 
 /* ── Dashboard ── */
 .dashboard {
-  max-width: 52rem;
-  margin: 0 auto;
+  width: 100%;
   padding: 0 0 2.5rem;
 }
 
@@ -261,7 +260,7 @@ textarea {
 
 /* ── Layout pages ── */
 .page {
-  max-width: 52rem;
+  width: 100%;
 }
 
 .page-header {
@@ -398,6 +397,18 @@ textarea {
   color: var(--red);
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .data-table tbody tr .btn-delete-icon {
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+
+  .data-table tbody tr:hover .btn-delete-icon,
+  .data-table tbody tr:focus-within .btn-delete-icon {
+    opacity: 1;
+  }
+}
+
 .table-actions {
   display: flex;
   gap: 0.25rem;
@@ -433,8 +444,8 @@ textarea {
 
 /* ── Dashboard empty state ── */
 .dashboard-empty {
-  max-width: 28rem;
-  margin: 2rem auto;
+  max-width: none;
+  margin: 0;
   padding: 1.5rem 1.25rem;
   text-align: center;
   background: var(--surface);
@@ -503,8 +514,8 @@ textarea {
 }
 
 .page-empty.dashboard-empty {
-  max-width: 28rem;
-  margin: 2rem auto;
+  max-width: none;
+  margin: 0;
   padding: 1.5rem 1.25rem;
   text-align: center;
   background: var(--surface);

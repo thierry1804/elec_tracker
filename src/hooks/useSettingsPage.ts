@@ -24,7 +24,7 @@ export function useSettingsPage() {
   const [importPayload, setImportPayload] = useState<ExportPayload | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [clipboardOk, setClipboardOk] = useState(false);
-  const [theme, setTheme] = useState<Theme>(() => getStoredTheme() ?? 'system');
+  const [theme, setTheme] = useState<Theme>(() => getStoredTheme() ?? 'auto');
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderDaysBefore, setReminderDaysBefore] = useState(3);
   const [reminderByHabit, setReminderByHabit] = useState(false);

@@ -1,0 +1,6 @@
+# Image de production : sert un `dist/` déjà construit (npm run build), sans compiler sur le serveur.
+FROM nginxinc/nginx-unprivileged:alpine
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY security-headers.conf /etc/nginx/security-headers.conf
+COPY dist /usr/share/nginx/html
+EXPOSE 8080

@@ -1,5 +1,5 @@
 import type { AppData } from '../types';
-import { formatMontant } from '../lib/format';
+import { formatMontant, formatNombre, formatNombreSouple } from '../lib/format';
 import { useSettings } from '../context/SettingsContext';
 import {
   getComparaisonCeMoisVsDernier,
@@ -30,7 +30,7 @@ function formatDate(d: Date): string {
 function formatEvolutionPct(pct: number): { affichage: string; titreExact?: string } {
   const cap = 400;
   const arrondi = Math.round(pct * 10) / 10;
-  const avecVirgule = String(arrondi).replace('.', ',');
+  const avecVirgule = formatNombreSouple(arrondi, 1);
   const signe = arrondi > 0 ? '+' : '';
   const exact = `${signe}${avecVirgule} %`;
   if (Math.abs(arrondi) > cap) {
@@ -159,13 +159,13 @@ export default function DashboardAnalytics({ data }: DashboardAnalyticsProps) {
           <p className="analytics-inline-detail">
             Ce mois :{' '}
             {prixComparaison.prixCeMois != null
-              ? `${prixComparaison.prixCeMois.toFixed(2).replace('.', ',')} Ar/kWh`
+              ? `${formatNombre(prixComparaison.prixCeMois, 2)} Ar/kWh`
               : '—'}
             {prixComparaison.prixMoisDernier != null && (
               <>
                 {' '}
                 · Mois précédent :{' '}
-                {prixComparaison.prixMoisDernier.toFixed(2).replace('.', ',')} Ar/kWh
+                {formatNombre(prixComparaison.prixMoisDernier, 2)} Ar/kWh
               </>
             )}
             {prixComparaison.evolutionPct != null && (

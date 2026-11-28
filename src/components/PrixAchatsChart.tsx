@@ -68,12 +68,12 @@ export default function PrixAchatsChart({ chartData }: PrixAchatsChartProps) {
           <XAxis
             dataKey="label"
             stroke="var(--muted)"
-            fontSize={11}
+            fontSize={12}
             minTickGap={chartData.length > 8 ? 24 : 12}
           />
           <YAxis
             stroke="var(--muted)"
-            fontSize={11}
+            fontSize={12}
             width={48}
             tickFormatter={(v) => `${v}`}
             label={{
@@ -81,7 +81,7 @@ export default function PrixAchatsChart({ chartData }: PrixAchatsChartProps) {
               angle: -90,
               position: 'insideLeft',
               fill: 'var(--muted)',
-              fontSize: 10,
+              fontSize: 12,
               offset: 8,
             }}
           />

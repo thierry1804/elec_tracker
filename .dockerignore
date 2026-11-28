@@ -1,0 +1,10 @@
+node_modules
+.git
+.claude
+.cursor
+.impeccable
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+src

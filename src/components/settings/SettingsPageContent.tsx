@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSettingsPage, formatLastSave, type SettingsTabId } from '../../hooks/useSettingsPage';
 import { useEmbeddedAi } from '../../context/EmbeddedAiContext';
 import { MODELS } from '../../lib/ai/models';
@@ -6,7 +6,7 @@ import { buildFullAiContext } from '../../lib/ai/buildContext';
 import type { CompteurMode, ModelTier } from '../../types';
 import { exportRelevesCSV, exportAchatsCSV } from '../../lib/csvExport';
 import { loadDataForCompteur } from '../../lib/storage';
-import { labelMode, useCompteurMode } from '../../lib/compteurMode';
+import { labelMode, nomCompteurPrincipal, useCompteurMode } from '../../lib/compteurMode';
 import { downloadReportHtml } from '../../lib/reportExport';
 import { downloadReportPdf } from '../../lib/pdfExport';
 import { generateTextSummary, copyToClipboard } from '../../lib/clipboardSummary';
@@ -24,6 +24,13 @@ const IconSun = () => (
   </svg>
 );
 
+const IconClock = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <circle cx="12" cy="12" r="9" />
+    <polyline points="12 7 12 12 15 14" />
+  </svg>
+);
+
 const IconMonitor = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
@@ -37,6 +44,12 @@ const IconMoon = () => (
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
   </svg>
 );
+
+const THEME_CHOICES = [
+  { value: 'light', label: 'Clair', Icon: IconSun },
+  { value: 'auto', label: 'Auto', Icon: IconClock },
+  { value: 'dark', label: 'Sombre', Icon: IconMoon },
+] as const;
 
 const IconUpload = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -210,43 +223,24 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
                 <IconSun />
                 Apparence
               </h3>
-              <p className="settings-hint">Choisir le thème de l'application</p>
-              <div
-                className="theme-toggle theme-toggle-three theme-toggle-icons"
-                role="group"
-                aria-label="Thème d’affichage"
-              >
-                <button
-                  type="button"
-                  className={`theme-toggle-option theme-toggle-option--icon ${theme === 'light' ? 'theme-toggle-option-active' : ''}`}
-                  onClick={() => handleThemeChange('light')}
-                  aria-pressed={theme === 'light'}
-                  aria-label="Thème clair"
-                  title="Clair"
-                >
-                  <IconSun />
-                </button>
-                <button
-                  type="button"
-                  className={`theme-toggle-option theme-toggle-option--icon ${theme === 'system' ? 'theme-toggle-option-active' : ''}`}
-                  onClick={() => handleThemeChange('system')}
-                  aria-pressed={theme === 'system'}
-                  aria-label="Thème selon le système"
-                  title="Système"
-                >
-                  <IconMonitor />
-                </button>
-                <button
-                  type="button"
-                  className={`theme-toggle-option theme-toggle-option--icon ${theme === 'dark' ? 'theme-toggle-option-active' : ''}`}
-                  onClick={() => handleThemeChange('dark')}
-                  aria-pressed={theme === 'dark'}
-                  aria-label="Thème sombre"
-                  title="Sombre"
-                >
-                  <IconMoon />
-                </button>
+              <p className="settings-hint">Choisir le thème de l'application.</p>
+              <div className="theme-toggle theme-toggle-three" role="group" aria-label="Thème d’affichage">
+                {THEME_CHOICES.map(({ value, label, Icon }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`theme-toggle-option ${theme === value ? 'theme-toggle-option-active' : ''}`}
+                    onClick={() => handleThemeChange(value)}
+                    aria-pressed={theme === value}
+                  >
+                    <Icon />
+                    <span>{label}</span>
+                  </button>
+                ))}
               </div>
+              <p className="settings-hint settings-hint-inline">
+                Auto : sombre de 18 h à 6 h, clair en journée, selon l&apos;heure de l&apos;appareil.
+              </p>
             </section>
 
             <section className="settings-section settings-card" aria-labelledby="affichage-heading">
@@ -322,7 +316,7 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
                   }}
                 >
                   <option value="">
-                    Principal ({labelMode(currentSettings.modePrincipal ?? 'prepaye')})
+                    {nomCompteurPrincipal(currentSettings)} ({labelMode(currentSettings.modePrincipal ?? 'prepaye')})
                   </option>
                   {(currentSettings.compteurs ?? []).map((c) => (
                     <option key={c.id} value={c.id}>
@@ -374,10 +368,11 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
               <div className="settings-compteur-list">
                 <div className="settings-compteur-row">
                   <CompteurModeRow
-                    nom="Principal"
+                    nom={nomCompteurPrincipal(currentSettings)}
                     mode={currentSettings.modePrincipal ?? 'prepaye'}
-                    locked={compteurADesDonnees()}
+                    hasData={compteurADesDonnees()}
                     onChange={(next) => updateSettings({ modePrincipal: next })}
+                    onRename={(nom) => updateSettings({ nomPrincipal: nom })}
                   />
                 </div>
                 {(currentSettings.compteurs ?? []).map((c) => (
@@ -385,10 +380,16 @@ export default function SettingsPageContent({ activeTab }: SettingsPageContentPr
                     <CompteurModeRow
                       nom={c.nom}
                       mode={c.mode}
-                      locked={compteurADesDonnees(c.id)}
+                      hasData={compteurADesDonnees(c.id)}
                       onChange={(next) => {
                         const compteurs = (currentSettings.compteurs ?? []).map((x) =>
                           x.id === c.id ? { ...x, mode: next } : x
+                        );
+                        updateSettings({ compteurs });
+                      }}
+                      onRename={(nom) => {
+                        const compteurs = (currentSettings.compteurs ?? []).map((x) =>
+                          x.id === c.id ? { ...x, nom } : x
                         );
                         updateSettings({ compteurs });
                       }}
@@ -793,32 +794,110 @@ function compteurADesDonnees(id?: string): boolean {
   return data.releves.length > 0 || data.achats.length > 0;
 }
 
+const NOM_COMPTEUR_MAX = 120;
+
+/** Nom modifiable sur place : Entrée ou clic ailleurs valide, Échap annule, un nom vide est refusé. */
+function CompteurNameField({ nom, onCommit }: { nom: string; onCommit: (nom: string) => void }) {
+  const [value, setValue] = useState(nom);
+  const cancelled = useRef(false);
+
+  useEffect(() => {
+    setValue(nom);
+  }, [nom]);
+
+  const commit = () => {
+    if (cancelled.current) {
+      cancelled.current = false;
+      setValue(nom);
+      return;
+    }
+    const next = value.trim().slice(0, NOM_COMPTEUR_MAX);
+    if (!next) {
+      setValue(nom);
+      return;
+    }
+    setValue(next);
+    if (next !== nom) onCommit(next);
+  };
+
+  return (
+    <input
+      type="text"
+      className="objective-field-input settings-compteur-name"
+      aria-label={`Nom du compteur ${nom}`}
+      value={value}
+      maxLength={NOM_COMPTEUR_MAX}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+        if (e.key === 'Escape') {
+          cancelled.current = true;
+          e.currentTarget.blur();
+        }
+      }}
+    />
+  );
+}
+
 function CompteurModeRow({
   nom,
   mode,
-  locked,
+  hasData,
   onChange,
+  onRename,
 }: {
   nom: string;
   mode: CompteurMode;
-  locked: boolean;
+  /** Le compteur contient déjà des relevés ou achats : le changement de type est confirmé. */
+  hasData: boolean;
   onChange: (mode: CompteurMode) => void;
+  onRename: (nom: string) => void;
 }) {
+  const [pending, setPending] = useState<CompteurMode | null>(null);
+
+  const request = (next: CompteurMode) => {
+    if (next === mode) return;
+    if (hasData) setPending(next);
+    else onChange(next);
+  };
+
   return (
     <>
-      <span>{nom}</span>
-      {locked ? (
-        <span className="settings-compteur-type">{labelMode(mode)}</span>
-      ) : (
-        <select
-          className="objective-field-input settings-compteur-mode"
-          aria-label={`Type de ${nom}`}
-          value={mode}
-          onChange={(e) => onChange(e.target.value === 'postpaye' ? 'postpaye' : 'prepaye')}
-        >
-          <option value="prepaye">Prépayé</option>
-          <option value="postpaye">Postpayé</option>
-        </select>
+      <CompteurNameField nom={nom} onCommit={onRename} />
+      <select
+        className="objective-field-input settings-compteur-mode"
+        aria-label={`Type de ${nom}`}
+        value={pending ?? mode}
+        onChange={(e) => request(e.target.value === 'postpaye' ? 'postpaye' : 'prepaye')}
+      >
+        <option value="prepaye">Prépayé</option>
+        <option value="postpaye">Postpayé</option>
+      </select>
+      {pending && (
+        <div className="settings-compteur-confirm" role="alertdialog" aria-label={`Changer le type de ${nom}`}>
+          <p>
+            {pending === 'postpaye'
+              ? 'Passer en postpayé : les relevés seront lus comme un index qui monte, et la consommation sera « relevé courant − relevé précédent ».'
+              : 'Passer en prépayé : les relevés seront lus comme un crédit qui baisse, et la consommation sera « relevé précédent − relevé courant ».'}{' '}
+            Les données existantes ne sont pas modifiées.
+          </p>
+          <div className="settings-compteur-confirm-actions">
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => {
+                onChange(pending);
+                setPending(null);
+              }}
+            >
+              Changer en {labelMode(pending).toLowerCase()}
+            </button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPending(null)}>
+              Annuler
+            </button>
+          </div>
+        </div>
       )}
     </>
   );

@@ -12,6 +12,7 @@ import DeleteConfirmButton from '../components/DeleteConfirmButton';
 import { useLayoutActions } from '../context/LayoutContext';
 import { labelReleveValeur, useCompteurMode } from '../lib/compteurMode';
 import { IconEdit, IconTrash } from '../components/nav/NavIcons';
+import { formatNombre, formatNombreSouple, formatDuree } from '../lib/format';
 
 export default function Historique() {
   const { data, deleteReleve, restoreReleve } = useApp();
@@ -39,15 +40,10 @@ export default function Historique() {
       : date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  const formatDuree = (nbJours: number) =>
-    nbJours < 1
-      ? `${(nbJours * 24).toFixed(1).replace('.', ',')} h`
-      : `${Number.isInteger(nbJours) ? nbJours : nbJours.toFixed(1).replace('.', ',')} j`;
-
   /** Hausse de solde : l'app affiche la différence entre deux lectures, pas le kWh saisi dans « Achat ». */
   function ligneRechargement(conso: ConsoEntreReleves) {
     const deltaReleves = Math.abs(conso.kwhConsommes);
-    const dStr = deltaReleves.toFixed(2).replace('.', ',');
+    const dStr = formatNombre(deltaReleves, 2);
     const sur = formatDuree(conso.nbJours);
     const achatsI = findAchatsDansIntervalleReleves(
       data.achats,
@@ -58,8 +54,8 @@ export default function Historique() {
     const ecart = Math.round((deltaReleves - sommeAchats) * 100) / 100;
 
     if (achatsI.length === 0) {
-      const ap = String(conso.kwhApres).replace('.', ',');
-      const av = String(conso.kwhAvant).replace('.', ',');
+      const ap = formatNombreSouple(conso.kwhApres);
+      const av = formatNombreSouple(conso.kwhAvant);
       return (
         <>
           Hausse du solde +{dStr} kWh{' '}
@@ -90,7 +86,7 @@ export default function Historique() {
         <span className="table-cell-muted">
           {' '}
           (écart relevés − achat : {ecart > 0 ? '+' : ''}
-          {ecart.toFixed(2).replace('.', ',')} kWh)
+          {formatNombre(ecart, 2)} kWh)
         </span>
       </>
     );
@@ -99,8 +95,8 @@ export default function Historique() {
   if (tries.length === 0) {
     return (
       <div className="page historique">
+        <PageHeader title="Relevés" lead="Historique des lectures et consommations calculées." />
         <div className="page-empty dashboard-empty" role="status">
-          <h2 className="dashboard-empty-title">Relevés</h2>
           <p className="dashboard-empty-text">
             Aucun relevé enregistré.{' '}
             {postpaye
@@ -139,13 +135,13 @@ export default function Historique() {
               return (
                 <tr key={releve.id}>
                   <td>{formatDateHeure(releve.date)}</td>
-                  <td className="mono">{releve.creditRestantKwh}</td>
+                  <td className="mono">{formatNombreSouple(releve.creditRestantKwh)}</td>
                   <td>
                     {conso != null
                       ? conso.kwhConsommes >= 0
-                        ? `${conso.kwhConsommes.toFixed(2)} (sur ${formatDuree(conso.nbJours)})`
+                        ? `${formatNombre(conso.kwhConsommes)} (sur ${formatDuree(conso.nbJours)})`
                         : postpaye
-                          ? `Index en baisse ${conso.kwhConsommes.toFixed(2)} kWh (sur ${formatDuree(conso.nbJours)})`
+                          ? `Index en baisse de ${formatNombre(Math.abs(conso.kwhConsommes))} kWh (sur ${formatDuree(conso.nbJours)})`
                           : ligneRechargement(conso)
                       : '—'}
                   </td>

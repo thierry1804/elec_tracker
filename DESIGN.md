@@ -90,6 +90,8 @@ La densité est modérée : assez d'information pour décider, sans surcharge vi
 
 Le système rejette explicitement l'esthétique « dashboard SaaS IA » : pas de glassmorphism, pas de dégradés décoratifs, pas de cartes flottantes avec hover dramatique, pas d'emojis comme icônes, pas de labels en majuscules espacées.
 
+Le thème est **automatique** : sombre de 18 h à 6 h (heure locale), clair en journée, avec un choix manuel dans Paramètres. Le clair et le sombre sont deux thèmes à part entière.
+
 **Key Characteristics:**
 
 - Registre *product* : familiarité gagnée, pas surprise décorative
